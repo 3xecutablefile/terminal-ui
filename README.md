@@ -68,10 +68,11 @@ unzip app-macos-*.zip
 ### Clone & build (macOS/Linux)
 
 ```bash
-git clone https://github.com/ex3cutablefile/terminal-ui.git
+git clone https://github.com/3xecutablefile/terminal-ui.git
 cd terminal-ui
 cargo build --release -p app
 sudo ln -sf "$(pwd)/target/release/app" /usr/local/bin/terminal-ui
+
 # verify the shortcut
 terminal-ui --version
 ```
@@ -79,6 +80,7 @@ terminal-ui --version
 ### Quick build
 
 ```bash
+# in repo root
 cargo build --release -p app
 ./target/release/app   # run (path varies per OS)
 ```
@@ -230,7 +232,7 @@ Resize the window → the grid should reflow without drift.
 
 ## 🙌 Credits
 
-* **Fork maintainer**: **@ex3cutablefile** — project direction, migration plan, native UI, and theme system.
+* **Fork maintainer**: **@3xecutablefile** — project direction, migration plan, native UI, and theme system.
 * Inspired by the original **eDEX-UI** concept. If you reuse original eDEX assets/themes, respect their **GPL-3.0** license.
 * This Rust rewrite’s code is licensed as noted below.
 
@@ -252,4 +254,3 @@ PRs and issues welcome!
 * Keep panels on a throttled update cadence; never block the terminal render path.
 
 ```
-
