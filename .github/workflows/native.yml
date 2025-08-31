@@ -6,13 +6,24 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact: app-linux-x64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact: app-macos-x64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact: app-windows-x64
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.89.0
+          targets: ${{ matrix.target }}
           components: rustfmt, clippy
       - name: Cargo fmt
         working-directory: native
@@ -23,12 +34,11 @@ jobs:
       - name: Cargo test
         working-directory: native
         run: cargo test
-      - name: Build app
+      - name: Cargo build
         working-directory: native
-        run: cargo build --release -p app
-      - name: Upload app
-        uses: actions/upload-artifact@v3
+        run: cargo build --release -p app --target ${{ matrix.target }}
+      - uses: actions/upload-artifact@v3
         with:
-          name: app-${{ matrix.os }}
-          path: native/target/release/app${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+          name: ${{ matrix.artifact }}
+          path: native/target/${{ matrix.target }}/release/app${{ matrix.os == 'windows-latest' && '.exe' || '' }}
           if-no-files-found: error
