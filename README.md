@@ -45,7 +45,7 @@ Download the archive for your platform from the table above and extract it.
 ```bash
 tar -xf app-linux-*.tar.gz   # or unzip app-linux-*.zip
 ./app                        # run the binary
-```
+````
 
 ### macOS
 
@@ -59,14 +59,26 @@ unzip app-macos-*.zip
 ## 🛠 Build from Source
 
 ### Prereqs
-- **Rust**: pinned via `rust-toolchain.toml` (≥ 1.79.0)
-- **GPU**: Vulkan (Linux) or Metal (macOS)
-- **Linux**: Vulkan loader (`libvulkan1`) + GPU drivers (Mesa/NVIDIA)
-- **macOS**: 12+ recommended
+
+* **Rust**: pinned via `rust-toolchain.toml` (≥ 1.79.0)
+* **GPU**: Vulkan (Linux) or Metal (macOS)
+* **Linux**: Vulkan loader (`libvulkan1`) + GPU drivers (Mesa/NVIDIA)
+* **macOS**: 12+ recommended
+
+### Clone & build (macOS/Linux)
+
+```bash
+git clone https://github.com/ex3cutablefile/terminal-ui.git
+cd terminal-ui
+cargo build --release -p app
+sudo ln -sf "$(pwd)/target/release/app" /usr/local/bin/terminal-ui
+# verify the shortcut
+terminal-ui --version
+```
 
 ### Quick build
+
 ```bash
-# in repo root
 cargo build --release -p app
 ./target/release/app   # run (path varies per OS)
 ```
@@ -121,7 +133,6 @@ Example (`tron.toml`):
 foreground = "#D6EFFF"
 background = "#07121A"
 cursor     = "#66FCF1"
-# … plus the 16-color ANSI palette …
 
 [ui]
 panel_bg     = "rgba(10,18,28,0.85)"
@@ -227,8 +238,8 @@ Resize the window → the grid should reflow without drift.
 
 ## 📜 License
 
-* **Rust code (this repository)**: choose a license appropriate for your goals (e.g., MIT or Apache-2.0).
-* **Legacy eDEX assets** (if any are reused): **GPL-3.0**. Mixing GPL assets imposes GPL terms on the combined distribution. Consider shipping **original** themes/assets to keep the Rust code under a permissive license.
+* **Rust code (this repository)**: MIT or Apache-2.0 (choose one).
+* **Legacy eDEX assets** (if reused): GPL-3.0. Mixing GPL assets imposes GPL terms on the combined distribution.
 
 ---
 
@@ -239,4 +250,6 @@ PRs and issues welcome!
 * Run `cargo fmt`, `cargo clippy -D warnings`, `cargo test` before pushing.
 * Add screenshots/gifs for UI PRs (themes/effects).
 * Keep panels on a throttled update cadence; never block the terminal render path.
+
+```
 
