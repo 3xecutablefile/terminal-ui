@@ -1,0 +1,34 @@
+name: Native CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.89.0
+          components: rustfmt, clippy
+      - name: Cargo fmt
+        working-directory: native
+        run: cargo fmt --all -- --check
+      - name: Cargo clippy
+        working-directory: native
+        run: cargo clippy --workspace -- -D warnings
+      - name: Cargo test
+        working-directory: native
+        run: cargo test
+      - name: Build app
+        working-directory: native
+        run: cargo build --release -p app
+      - name: Upload app
+        uses: actions/upload-artifact@v3
+        with:
+          name: app-${{ matrix.os }}
+          path: native/target/release/app${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+          if-no-files-found: error

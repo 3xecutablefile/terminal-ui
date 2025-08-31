@@ -1,0 +1,3 @@
+[workspace]
+members = ["ptyd"]
+resolver = "2"
