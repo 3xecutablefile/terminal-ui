@@ -1,0 +1,69 @@
+name: Native CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact: app-linux-x64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact: app-macos-x64
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.89.0
+          targets: ${{ matrix.target }}
+          components: rustfmt, clippy
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cargo fmt
+        working-directory: native
+        run: cargo fmt --all -- --check
+      - name: Cargo clippy
+        working-directory: native
+        run: cargo clippy --workspace -- -D warnings
+      - name: Cargo test
+        working-directory: native
+        run: cargo test --workspace
+      - name: Build ptyd
+        working-directory: native
+        run: cargo build --release -p ptyd --target ${{ matrix.target }}
+      - name: Smoke PTY (bounded)
+        working-directory: native
+        shell: bash
+        run: |
+          BIN="target/${{ matrix.target }}/release/ptyd"
+          printf '%s\n' \
+            '{"t":"i","data":"ZWNobyBvaw0K"}' \
+            '{"t":"i","data":"ZXhpdA0K"}' \
+          | "$BIN" | tee /tmp/ptyd.out
+          grep -q '"t":"o"' /tmp/ptyd.out
+          grep -q '"t":"x"' /tmp/ptyd.out
+      - name: Build app
+        working-directory: native
+        run: cargo build --release --manifest-path app/Cargo.toml --target ${{ matrix.target }}
+      - name: Package
+        working-directory: native
+        run: |
+          out="target/${{ matrix.target }}/release"
+          mkdir -p dist/${{ matrix.artifact }}
+          cp "$out/app" dist/${{ matrix.artifact }}/
+          rsync -a app/assets/ dist/${{ matrix.artifact }}/assets/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: native/dist/${{ matrix.artifact }}
+          if-no-files-found: error

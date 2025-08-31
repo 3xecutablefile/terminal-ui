@@ -1,0 +1,38 @@
+[meta]
+name = "Tron Neon"
+author = "Example"
+variant = "dark"
+
+[terminal]
+foreground = "#D6EFFF"
+background = "#07121A"
+cursor     = "#66FCF1"
+selection  = "#16394B"
+black      = "#0B0C10"
+red        = "#FF5C57"
+green      = "#5AF78E"
+yellow     = "#F3F99D"
+blue       = "#57C7FF"
+magenta    = "#FF6AC1"
+cyan       = "#9AEDFE"
+white      = "#F1F1F0"
+bright_black   = "#2F3B45"
+bright_red     = "#FF6E67"
+bright_green   = "#5AF78E"
+bright_yellow  = "#F3F99D"
+bright_blue    = "#57C7FF"
+bright_magenta = "#FF6AC1"
+bright_cyan    = "#9AEDFE"
+bright_white   = "#FFFFFF"
+
+[ui]
+panel_bg     = "rgba(10,18,28,0.85)"
+panel_border = "#0EE7FF"
+text         = "#CFE9FF"
+accent       = "#00E5FF"
+
+[effects]
+grid_color       = "rgba(0,229,255,0.23)"
+grid_spacing     = 28
+scanline_opacity = 0.06
+glow_intensity   = 0.55
