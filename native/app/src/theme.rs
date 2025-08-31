@@ -8,6 +8,9 @@ use std::fs;
 use std::path::PathBuf;
 use std::str::FromStr;
 
+const TRON_TOML: &str = include_str!("../assets/themes/tron.toml");
+const MONO_LIGHT_TOML: &str = include_str!("../assets/themes/mono-light.toml");
+
 #[derive(Deserialize, Clone)]
 pub struct Theme {
     pub meta: Meta,
@@ -76,26 +79,27 @@ pub fn load_theme(name: &str) -> Result<Theme> {
             return Ok(theme);
         }
     }
+    let builtin = match name {
+        "tron" => Some(TRON_TOML),
+        "mono-light" => Some(MONO_LIGHT_TOML),
+        _ => None,
+    };
+    if let Some(toml) = builtin {
+        return Ok(toml::from_str(toml)?);
+    }
     bail!("theme '{name}' not found")
 }
 
 pub fn list_themes() -> Vec<String> {
-    let mut names = Vec::new();
+    let mut names = vec!["tron".to_string(), "mono-light".to_string()];
     if let Some(mut dir) = config_dir() {
         dir.push("terminal-ui/themes");
         if let Ok(rd) = fs::read_dir(dir) {
             for entry in rd.flatten() {
                 if let Some(s) = entry.path().file_stem().and_then(|s| s.to_str()) {
-                    names.push(s.to_string());
-                }
-            }
-        }
-    }
-    if let Ok(rd) = fs::read_dir("native/app/assets/themes") {
-        for entry in rd.flatten() {
-            if let Some(s) = entry.path().file_stem().and_then(|s| s.to_str()) {
-                if !names.contains(&s.to_string()) {
-                    names.push(s.to_string());
+                    if !names.contains(&s.to_string()) {
+                        names.push(s.to_string());
+                    }
                 }
             }
         }

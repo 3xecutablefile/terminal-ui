@@ -237,6 +237,10 @@ fn is_toggle_theme(mods: winit::event::ModifiersState, key: Option<VirtualKeyCod
 }
 
 fn main() -> Result<()> {
+    if std::env::args().any(|a| a == "--version") {
+        println!("{} ({})", env!("CARGO_PKG_VERSION"), env!("GIT_SHA"));
+        return Ok(());
+    }
     env_logger::init();
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new()

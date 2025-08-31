@@ -44,6 +44,12 @@ jobs:
       - name: Build ptyd
         working-directory: native
         run: cargo build --release -p ptyd --target ${{ matrix.target }}
+      - name: Smoke PTY
+        working-directory: native
+        shell: bash
+        run: |
+          echo '{"t":"i","data":"ZWNobyBvaw0K"}' | \
+          cargo run --quiet -p ptyd --target ${{ matrix.target }} | head -n1
       - name: Build app
         working-directory: native
         run: cargo build --release --manifest-path app/Cargo.toml --target ${{ matrix.target }}
