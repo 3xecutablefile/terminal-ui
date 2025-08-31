@@ -56,22 +56,34 @@ jobs:
           | "$BIN" | tee /tmp/ptyd.out
           grep -q '"t":"o"' /tmp/ptyd.out
           grep -q '"t":"x"' /tmp/ptyd.out
-      - name: Smoke PTY (bounded)
+      - name: Smoke PTY (Windows, bounded)
         if: matrix.os == 'windows-latest'
         working-directory: native
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           $bin = "target\${{ matrix.target }}\release\ptyd.exe"
-          $in  = @(
+          if (-not (Test-Path $bin)) { throw "ptyd not found at $bin" }
+
+          $frames = @(
             '{"t":"i","data":"ZWNobyBvaw0K"}'
             '{"t":"i","data":"ZXhpdA0K"}'
           ) -join "`n"
+
           $p = Start-Process -FilePath $bin -NoNewWindow -RedirectStandardInput pipe -RedirectStandardOutput pipe -PassThru
-          $p.StandardInput.WriteLine($in)
+          $p.StandardInput.WriteLine($frames)
           $p.StandardInput.Close()
+
+          $completed = $p.WaitForExit(10000)
           $out = $p.StandardOutput.ReadToEnd()
-          if ($out -notmatch '"t":"o"') { throw "no output frame" }
-          if ($out -notmatch '"t":"x"') { throw "no exit frame" }
+
+          if (-not $completed) {
+            try { $p.Kill() } catch {}
+            throw "ptyd did not exit within timeout. Partial output:`n$out"
+          }
+
+          if ($out -notmatch '"t":"o"') { Write-Host $out; throw 'no output frame ("t":"o")' }
+          if ($out -notmatch '"t":"x"') { Write-Host $out; throw 'no exit frame ("t":"x")' }
       - name: Build app
         working-directory: native
         run: cargo build --release --manifest-path app/Cargo.toml --target ${{ matrix.target }}
