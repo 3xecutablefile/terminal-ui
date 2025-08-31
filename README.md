@@ -19,13 +19,20 @@ A native Rust reimagining of the classic eDEX-UI: flashy, themeable terminal das
 
 ## 📦 Prebuilt Downloads
 
-| OS      | Arch                     | Artifact (example)                 |
-|---------|--------------------------|------------------------------------|
-| Linux   | x86_64, aarch64          | `app-linux-x64.zip`, `app-linux-arm64.tar.gz` |
-| macOS   | universal2 (x64+arm64)   | `app-macos-universal2.dmg`         |
-| Windows | x86_64, arm64            | `app-windows-x64.zip`, `app-windows-arm64.zip` |
+| OS    | Arch   | Artifact (example)  |
+|-------|--------|---------------------|
+| Linux | x86_64 | `app-linux-x64.zip` |
+| macOS | x86_64 | `app-macos-x64.zip` |
 
 > If you’re building from source, see **Build from Source** below.
+
+---
+
+## Platform support
+
+- ✅ Linux (x86_64)
+- ✅ macOS (x86_64 / Intel)
+- 🚫 Windows (disabled in CI, not officially supported)
 
 ---
 
@@ -43,16 +50,8 @@ tar -xf app-linux-*.tar.gz   # or unzip app-linux-*.zip
 ### macOS
 
 ```bash
-hdiutil attach app-macos-universal2.dmg
-cp -R /Volumes/App/App.app /Applications
-open /Applications/App.app
-```
-
-### Windows
-
-```powershell
-Expand-Archive app-windows-*.zip
-Start-Process app\app.exe
+unzip app-macos-*.zip
+./app-macos-x64/app
 ```
 
 ---
@@ -61,9 +60,8 @@ Start-Process app\app.exe
 
 ### Prereqs
 - **Rust**: pinned via `rust-toolchain.toml` (≥ 1.79.0)
-- **GPU**: Vulkan (Linux), Metal (macOS), D3D12 (Windows)
+- **GPU**: Vulkan (Linux) or Metal (macOS)
 - **Linux**: Vulkan loader (`libvulkan1`) + GPU drivers (Mesa/NVIDIA)
-- **Windows**: Windows 10 **1809+** for ConPTY
 - **macOS**: 12+ recommended
 
 ### Quick build
@@ -79,24 +77,8 @@ cargo build --release -p app
 # Linux x64
 cargo build --release -p app --target x86_64-unknown-linux-gnu
 
-# Linux arm64
-sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-cat >> ~/.cargo/config.toml <<'EOF2'
-[target.aarch64-unknown-linux-gnu]
-linker = "aarch64-linux-gnu-gcc"
-EOF2
-cargo build --release -p app --target aarch64-unknown-linux-gnu
-
-# macOS universal2
+# macOS x64
 cargo build --release -p app --target x86_64-apple-darwin
-cargo build --release -p app --target aarch64-apple-darwin
-lipo -create \
-  target/x86_64-apple-darwin/release/app \
-  target/aarch64-apple-darwin/release/app \
-  -output app-universal2
-
-# Windows (PowerShell)
-cargo build --release -p app --target x86_64-pc-windows-msvc
 ```
 
 ---
@@ -129,7 +111,7 @@ Inside the window:
 * Bundled: `Tron Neon` (dark), `Mono Light`.
 * Locations searched (in order):
 
-  1. `~/.config/edex-native/themes/*.toml` (Windows: `%APPDATA%\edex-native\themes\`)
+  1. `~/.config/edex-native/themes/*.toml`
   2. `native/app/assets/themes/*.toml` (bundled)
 
 Example (`tron.toml`):
@@ -160,7 +142,7 @@ scanline_opacity  = 0.06
 Default config path:
 
 * Linux/macOS: `~/.config/edex-native/config.toml`
-* Windows: `%APPDATA%\edex-native\config.toml`
+* macOS: `~/Library/Application Support/edex-native/config.toml`
 
 Example:
 
@@ -197,7 +179,7 @@ Inside the app:
 
 ```sh
 whoami
-uname -a            # (Windows: systeminfo)
+uname -a
 git --version
 nmap --version      # if installed
 vim; htop; tmux     # should render & respond (alt-screen)
@@ -221,7 +203,7 @@ Resize the window → the grid should reflow without drift.
 
 ### CI (GitHub Actions)
 
-* Matrix builds: Linux (x64/arm64), macOS (x64/arm64 → universal2), Windows (x64/arm64)
+* Matrix builds: Linux (x64) and macOS (x64)
 * Steps: `fmt`, `clippy -D warnings`, `test`, `build`
 * Artifacts include binary + `assets/` (themes, shaders)
 
@@ -229,7 +211,6 @@ Resize the window → the grid should reflow without drift.
 
 ## 🐛 Troubleshooting
 
-* **Windows Ctrl-C**: requires ConPTY (Win10 1809+). Prefer `pwsh.exe` if available.
 * **Linux/Wayland**: ensure Vulkan loader (`libvulkan1`) and GPU driver installed.
 * **No colors/Truecolor**: verify `TERM=xterm-256color`.
 * **Huge output (e.g., `yes`)**: PTY → UI buffer is capped; rendering may rate-limit.

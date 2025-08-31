@@ -15,9 +15,6 @@ jobs:
           - os: macos-latest
             target: x86_64-apple-darwin
             artifact: app-macos-x64
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            artifact: app-windows-x64
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@master
@@ -45,7 +42,6 @@ jobs:
         working-directory: native
         run: cargo build --release -p ptyd --target ${{ matrix.target }}
       - name: Smoke PTY (bounded)
-        if: matrix.os != 'windows-latest'
         working-directory: native
         shell: bash
         run: |
@@ -56,52 +52,6 @@ jobs:
           | "$BIN" | tee /tmp/ptyd.out
           grep -q '"t":"o"' /tmp/ptyd.out
           grep -q '"t":"x"' /tmp/ptyd.out
-      - name: Smoke PTY (Windows, bounded via Python)
-        if: matrix.os == 'windows-latest'
-        working-directory: native
-        shell: pwsh
-        env:
-          BIN: target\${{ matrix.target }}\release\ptyd.exe
-        run: |
-          $ErrorActionPreference = 'Stop'
-          if (-not (Test-Path $env:BIN)) { throw "ptyd not found at $env:BIN" }
-
-          python - <<'PY'
-          import json, subprocess, sys, os
-
-          bin_path = os.environ["BIN"]
-          p = subprocess.Popen([bin_path], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-
-          frames = [
-              {"t":"i","data":"ZWNobyBvaw0K"},
-              {"t":"i","data":"ZXhpdA0K"},
-          ]
-          for f in frames:
-              p.stdin.write(json.dumps(f) + "\n")
-              p.stdin.flush()
-          p.stdin.close()
-
-          try:
-              out = p.stdout.read()
-              p.wait(timeout=10)
-          except Exception as e:
-              try:
-                  p.kill()
-              except Exception:
-                  pass
-              print("SMOKE ERROR:", e, file=sys.stderr)
-              print(out if 'out' in locals() else '', file=sys.stderr)
-              sys.exit(1)
-
-          if '"t":"o"' not in out:
-              print(out)
-              sys.exit("no output frame (t:o)")
-          if '"t":"x"' not in out:
-              print(out)
-              sys.exit("no exit frame (t:x)")
-
-          print(out.splitlines()[0] if out else "")
-          PY
       - name: Build app
         working-directory: native
         run: cargo build --release --manifest-path app/Cargo.toml --target ${{ matrix.target }}
@@ -110,7 +60,7 @@ jobs:
         run: |
           out="target/${{ matrix.target }}/release"
           mkdir -p dist/${{ matrix.artifact }}
-          cp "$out/app${{ matrix.os == 'windows-latest' && '.exe' || '' }}" dist/${{ matrix.artifact }}/
+          cp "$out/app" dist/${{ matrix.artifact }}/
           rsync -a app/assets/ dist/${{ matrix.artifact }}/assets/
       - uses: actions/upload-artifact@v4
         with:
