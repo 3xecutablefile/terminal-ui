@@ -25,6 +25,13 @@ jobs:
           toolchain: 1.89.0
           targets: ${{ matrix.target }}
           components: rustfmt, clippy
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Cargo fmt
         working-directory: native
         run: cargo fmt --all -- --check
@@ -33,12 +40,22 @@ jobs:
         run: cargo clippy --workspace -- -D warnings
       - name: Cargo test
         working-directory: native
-        run: cargo test
-      - name: Cargo build
+        run: cargo test --workspace
+      - name: Build ptyd
         working-directory: native
-        run: cargo build --release -p app --target ${{ matrix.target }}
-      - uses: actions/upload-artifact@v3
+        run: cargo build --release -p ptyd --target ${{ matrix.target }}
+      - name: Build app
+        working-directory: native
+        run: cargo build --release --manifest-path app/Cargo.toml --target ${{ matrix.target }}
+      - name: Package
+        working-directory: native
+        run: |
+          out="target/${{ matrix.target }}/release"
+          mkdir -p dist/${{ matrix.artifact }}
+          cp "$out/app${{ matrix.os == 'windows-latest' && '.exe' || '' }}" dist/${{ matrix.artifact }}/
+          rsync -a app/assets/ dist/${{ matrix.artifact }}/assets/
+      - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: native/target/${{ matrix.target }}/release/app${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+          path: native/dist/${{ matrix.artifact }}
           if-no-files-found: error
