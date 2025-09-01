@@ -111,11 +111,7 @@ impl State {
         })
     }
 
-    fn resize(
-        &mut self,
-        new_size: winit::dpi::PhysicalSize<u32>,
-        scale_factor: Option<f64>,
-    ) {
+    fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>, scale_factor: Option<f64>) {
         if new_size.width > 0 && new_size.height > 0 {
             if let Some(sf) = scale_factor {
                 let ratio = sf / self.scale_factor;
@@ -281,9 +277,11 @@ fn main() -> Result<()> {
                     match event {
                         WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
                         WindowEvent::Resized(size) => state.resize(size, None),
-                        WindowEvent::ScaleFactorChanged { new_inner_size, scale_factor, .. } => {
-                            state.resize(*new_inner_size, Some(scale_factor))
-                        }
+                        WindowEvent::ScaleFactorChanged {
+                            new_inner_size,
+                            scale_factor,
+                            ..
+                        } => state.resize(*new_inner_size, Some(scale_factor)),
                         _ => {}
                     }
                 }

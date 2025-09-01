@@ -1,5 +1,5 @@
-use sysinfo::{CpuRefreshKind, MemoryRefreshKind, RefreshKind, System};
 use std::time::{Duration, Instant};
+use sysinfo::{CpuRefreshKind, MemoryRefreshKind, RefreshKind, System};
 
 pub struct Panels {
     sys: System,
@@ -30,6 +30,7 @@ impl Panels {
     }
 
     pub fn tick(&mut self) {
+        // Avoid clippy float-eq lint via checked elapsed
         if self.last_sample.elapsed() < self.cadence {
             return;
         }
@@ -45,4 +46,3 @@ impl Panels {
         };
     }
 }
-
