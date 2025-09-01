@@ -70,8 +70,8 @@ unzip app-macos-*.zip
 ```bash
 git clone https://github.com/3xecutablefile/terminal-ui.git
 cd terminal-ui
-cargo build --release -p app
-sudo ln -sf "$(pwd)/target/release/app" /usr/local/bin/terminal-ui
+cargo build --release --manifest-path native/Cargo.toml -p app
+sudo ln -sf "$(pwd)/native/target/release/app" /usr/local/bin/terminal-ui
 
 # verify the shortcut
 terminal-ui --version
@@ -81,18 +81,18 @@ terminal-ui --version
 
 ```bash
 # in repo root
-cargo build --release -p app
-./target/release/app   # run (path varies per OS)
+cargo build --release --manifest-path native/Cargo.toml -p app
+./native/target/release/app   # run (path varies per OS)
 ```
 
 ### Cross-platform targets (examples)
 
 ```bash
 # Linux x64
-cargo build --release -p app --target x86_64-unknown-linux-gnu
+cargo build --release --manifest-path native/Cargo.toml -p app --target x86_64-unknown-linux-gnu
 
 # macOS x64
-cargo build --release -p app --target x86_64-apple-darwin
+cargo build --release --manifest-path native/Cargo.toml -p app --target x86_64-apple-darwin
 ```
 
 ---
