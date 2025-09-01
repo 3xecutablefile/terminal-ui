@@ -27,7 +27,7 @@ coverage
 build/Release
 
 # Dependency directories
-node_modules
+/node_modules/
 jspm_packages
 
 # Optional npm cache directory
@@ -41,4 +41,8 @@ jspm_packages
 
 dist
 prebuild-src
-src/node_modules
+
+# Rust build
+native/target
+native/app/assets/*.ttf
+# (keep Cargo.lock committed for reproducible builds if you prefer)
