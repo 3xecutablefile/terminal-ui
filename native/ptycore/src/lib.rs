@@ -1,18 +1,35 @@
+
 #[cfg(target_os = "windows")]
 compile_error!("Windows is not supported in this fork. Build on Linux or macOS.");
+
+=======
 
 use std::io::{self, Read, Write};
 
 use anyhow::{Context, Result};
 use portable_pty::{CommandBuilder, ExitStatus, NativePtySystem, PtySize, PtySystem};
 
+
 pub struct ShellPrefs {
+=======
+use which::which;
+
+pub struct ShellPrefs {
+    pub prefer_pwsh: bool,
+
     pub login: bool,
 }
 
 impl Default for ShellPrefs {
     fn default() -> Self {
+
         Self { login: true }
+=======
+        Self {
+            prefer_pwsh: true,
+            login: true,
+        }
+
     }
 }
 
@@ -92,6 +109,7 @@ pub fn spawn_shell(cols: u16, rows: u16, prefs: ShellPrefs) -> Result<PtyHandle>
 }
 
 fn build_shell_command(prefs: &ShellPrefs) -> Result<CommandBuilder> {
+
     let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".into());
     let mut cmd = CommandBuilder::new(shell.clone());
     if prefs.login {
@@ -114,6 +132,48 @@ fn build_shell_command(prefs: &ShellPrefs) -> Result<CommandBuilder> {
     Ok(cmd)
 }
 
+=======
+    if cfg!(windows) {
+        let mut shells = vec!["cmd.exe"]; // default fallback
+        if prefs.prefer_pwsh {
+            shells.insert(0, "pwsh.exe");
+            shells.insert(1, "powershell.exe");
+        } else {
+            shells.insert(0, "powershell.exe");
+            shells.insert(1, "pwsh.exe");
+        }
+        let shell = shells
+            .into_iter()
+            .find(|s| which(s).is_ok())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| std::env::var("COMSPEC").unwrap_or_else(|_| "cmd.exe".into()));
+        Ok(CommandBuilder::new(shell))
+    } else {
+        let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".into());
+        let mut cmd = CommandBuilder::new(shell.clone());
+        if prefs.login {
+            if let Some(name) = std::path::Path::new(&shell)
+                .file_name()
+                .and_then(|s| s.to_str())
+            {
+                match name {
+                    "bash" | "zsh" => {
+                        cmd.arg("-l");
+                        cmd.arg("-i");
+                    }
+                    "fish" => {
+                        cmd.arg("-l");
+                    }
+                    _ => {}
+                }
+            }
+        }
+        Ok(cmd)
+    }
+}
+
+#[cfg(unix)]
+
 fn send_signal(pid: u32, sig: Sig) -> Result<()> {
     use nix::sys::signal::{killpg, Signal};
     use nix::unistd::Pid;
@@ -125,3 +185,21 @@ fn send_signal(pid: u32, sig: Sig) -> Result<()> {
     killpg(Pid::from_raw(pid as i32), signo).context("killpg")?;
     Ok(())
 }
+
+=======
+
+#[cfg(windows)]
+fn send_signal(pid: u32, sig: Sig) -> Result<()> {
+    use windows_sys::Win32::System::Console::{
+        GenerateConsoleCtrlEvent, CTRL_BREAK_EVENT, CTRL_C_EVENT,
+    };
+    let evt = match sig {
+        Sig::Int => CTRL_C_EVENT,
+        Sig::Term | Sig::Quit => CTRL_BREAK_EVENT,
+    };
+    unsafe {
+        GenerateConsoleCtrlEvent(evt, pid);
+    }
+    Ok(())
+}
+

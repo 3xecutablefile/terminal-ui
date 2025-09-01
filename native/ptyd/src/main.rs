@@ -6,6 +6,12 @@ use base64::{engine::general_purpose::STANDARD as B64, Engine as _};
 use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
 use serde::{Deserialize, Serialize};
 
+
+=======
+#[cfg(windows)]
+use which::which;
+
+
 #[derive(Deserialize)]
 #[serde(tag = "t")]
 enum ToPty {
@@ -112,12 +118,21 @@ fn build_shell_command() -> Result<CommandBuilder> {
         .file_name()
         .and_then(|s| s.to_str())
         .unwrap_or("");
+
     if matches!(name, "bash" | "zsh") {
         c.arg("-l");
         c.arg("-i");
     } else if name == "fish" {
         c.arg("-l");
     } else {
+=======
+    c.arg(match name {
+        "bash" | "zsh" => "-l",
+        "fish" => "-l",
+        _ => "-i",
+    });
+    if matches!(name, "bash" | "zsh") {
+
         c.arg("-i");
     }
     Ok(c)
@@ -125,13 +140,20 @@ fn build_shell_command() -> Result<CommandBuilder> {
 
 #[cfg(windows)]
 fn build_shell_command() -> Result<CommandBuilder> {
+
     let exe = if which::which("pwsh.exe").is_ok() {
         "pwsh.exe"
     } else if which::which("powershell.exe").is_ok() {
+=======
+    let choice = if which("pwsh.exe").is_ok() {
+        "pwsh.exe"
+    } else if which("powershell.exe").is_ok() {
+
         "powershell.exe"
     } else {
         std::env::var("COMSPEC").unwrap_or_else(|_| "cmd.exe".into())
     };
+
     Ok(CommandBuilder::new(exe))
 }
 
@@ -153,5 +175,28 @@ fn forward_signal(child: &mut dyn portable_pty::Child, sig: &str) -> Result<()> 
 #[cfg(windows)]
 fn forward_signal(_child: &mut dyn portable_pty::Child, _sig: &str) -> Result<()> {
     // ConPTY surfaces Ctrl-C to many apps; no explicit signal handling needed.
+=======
+    Ok(CommandBuilder::new(choice))
+}
+
+fn forward_signal(child: &mut dyn portable_pty::Child, sig: &str) -> Result<()> {
+    #[cfg(unix)]
+    {
+        use nix::sys::signal::{kill, Signal};
+        use nix::unistd::Pid;
+        let pid = child.process_id().ok_or_else(|| anyhow!("no child pid"))? as i32;
+        let signo = match sig {
+            "INT" => Signal::SIGINT,
+            "TERM" => Signal::SIGTERM,
+            "QUIT" => Signal::SIGQUIT,
+            _ => Signal::SIGINT,
+        };
+        kill(Pid::from_raw(pid), signo).ok();
+    }
+    #[cfg(windows)]
+    {
+        let _ = sig; // ConPTY handles Ctrl-C for many apps; no-op
+    }
+
     Ok(())
 }

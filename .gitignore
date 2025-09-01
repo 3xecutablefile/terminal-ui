@@ -44,5 +44,8 @@ prebuild-src
 
 # Rust build
 native/target
+
 native/app/assets/*.ttf
+=======
+
 # (keep Cargo.lock committed for reproducible builds if you prefer)

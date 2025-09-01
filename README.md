@@ -45,7 +45,7 @@ Download the archive for your platform from the table above and extract it.
 ```bash
 tar -xf app-linux-*.tar.gz   # or unzip app-linux-*.zip
 ./app                        # run the binary
-```
+````
 
 ### macOS
 
@@ -59,14 +59,16 @@ unzip app-macos-*.zip
 ## 🛠 Build from Source
 
 ### Prereqs
-- **Rust**: pinned via `rust-toolchain.toml` (≥ 1.79.0)
-- **GPU**: Vulkan (Linux) or Metal (macOS)
-- **Linux**: Vulkan loader (`libvulkan1`) + GPU drivers (Mesa/NVIDIA)
-- **macOS**: 12+ recommended
+
+* **Rust**: pinned via `rust-toolchain.toml` (≥ 1.79.0)
+* **GPU**: Vulkan (Linux) or Metal (macOS)
+* **Linux**: Vulkan loader (`libvulkan1`) + GPU drivers (Mesa/NVIDIA)
+* **macOS**: 12+ recommended
 
 ### Clone & build (macOS/Linux)
+
 ```bash
-git clone https://github.com/ex3cutablefile/terminal-ui.git
+git clone https://github.com/3xecutablefile/terminal-ui.git
 cd terminal-ui
 cargo build --release -p app
 sudo ln -sf "$(pwd)/target/release/app" /usr/local/bin/terminal-ui
@@ -75,8 +77,9 @@ terminal-ui --version
 ```
 
 ### Quick build
+
 ```bash
-# in repo root
+# in repo root (or use --manifest-path native/Cargo.toml)
 cargo build --release -p app
 ./target/release/app   # run (path varies per OS)
 ```
@@ -151,7 +154,7 @@ scanline_opacity  = 0.06
 
 Default config path:
 
-* Linux: `~/.config/edex-native/config.toml`
+* Linux/macOS: `~/.config/edex-native/config.toml`
 * macOS: `~/Library/Application Support/edex-native/config.toml`
 
 Example:
@@ -228,7 +231,7 @@ Resize the window → the grid should reflow without drift.
 
 ## 🙌 Credits
 
-* **Fork maintainer**: **@ex3cutablefile** — project direction, migration plan, native UI, and theme system.
+* **Fork maintainer**: **@3xecutablefile** — project direction, migration plan, native UI, and theme system.
 * Inspired by the original **eDEX-UI** concept. If you reuse original eDEX assets/themes, respect their **GPL-3.0** license.
 * This Rust rewrite’s code is licensed as noted below.
 
@@ -236,8 +239,8 @@ Resize the window → the grid should reflow without drift.
 
 ## 📜 License
 
-* **Rust code (this repository)**: choose a license appropriate for your goals (e.g., MIT or Apache-2.0).
-* **Legacy eDEX assets** (if any are reused): **GPL-3.0**. Mixing GPL assets imposes GPL terms on the combined distribution. Consider shipping **original** themes/assets to keep the Rust code under a permissive license.
+* **Rust code (this repository)**: MIT or Apache-2.0 (choose one).
+* **Legacy eDEX assets** (if reused): GPL-3.0. Mixing GPL assets imposes GPL terms on the combined distribution.
 
 ---
 
@@ -249,3 +252,5 @@ PRs and issues welcome!
 * Add screenshots/gifs for UI PRs (themes/effects).
 * Keep panels on a throttled update cadence; never block the terminal render path.
 
+```
+```

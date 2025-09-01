@@ -12,7 +12,10 @@ mod gfx;
 mod term;
 mod theme;
 mod ui;
+
 use gfx::text::TextLayer;
+=======
+
 use gfx::Renderer;
 use term::Emu;
 use ui::panels::Panels;
@@ -31,7 +34,10 @@ struct State {
     theme: theme::Theme,
     switcher: ThemeSwitcher,
     panels: Panels,
+
     text: TextLayer,
+=======
+
 }
 
 impl State {
@@ -83,7 +89,10 @@ impl State {
 
         let emu = Emu::new(cols, rows);
         let renderer = Renderer::new();
+
         let text = TextLayer::new(&device, config.format)?;
+=======
+
         let theme = theme::load_theme("tron")?;
         let switcher = ThemeSwitcher::new();
         let panels = Panels::new();
@@ -101,7 +110,10 @@ impl State {
             theme,
             switcher,
             panels,
+
             text,
+=======
+
         })
     }
 
@@ -229,6 +241,7 @@ impl State {
             self.renderer
                 .draw_theme_overlay_rows(&mut encoder, &rows, &self.theme);
         }
+
         let txt = self.emu.snapshot((self.size.height / 18) as usize);
         self.text
             .queue(&txt, self.size.width as f32, self.size.height as f32);
@@ -243,6 +256,9 @@ impl State {
         }
         self.queue.submit(Some(encoder.finish()));
         self.text.belt.recall();
+=======
+        self.queue.submit(Some(encoder.finish()));
+
         output.present();
         let _ = self.renderer.draw();
         Ok(())

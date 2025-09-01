@@ -1,3 +1,4 @@
+
 use anyhow::{anyhow, Result};
 use fontdb::{Database, Family, Query};
 use wgpu::util::StagingBelt;
@@ -55,5 +56,14 @@ impl TextLayer {
             .map_err(|e| anyhow!(e))?;
         self.belt.finish();
         Ok(())
+=======
+#[allow(dead_code)]
+pub struct GlyphCache;
+
+#[allow(dead_code)]
+impl GlyphCache {
+    pub fn new() -> Self {
+        GlyphCache
+
     }
 }
