@@ -1,163 +1,84 @@
-# eDEX Native (Rust) — Real Shell • GPU UI
+# eDEX Native (Rust)
 
-A native Rust reimagining of the classic eDEX-UI: flashy, themeable terminal dashboard that launches your **real host shell** (bash/zsh/fish on Unix, PowerShell/cmd on Windows) through a PTY/ConPTY backend — no browser, no Electron.
+GPU-accelerated remake of the original eDEX-UI.  It launches your **real host shell** through a PTY/ConPTY backend and renders a neon dashboard with Rust, `winit`, and `wgpu`.
 
-> ⚡ Status: early preview. Terminal, theme switcher, CPU/RAM panels, and ambient effects hooks are in. Packaging & input polish are ongoing.
+> ⚡ Early preview: basic terminal, theme switcher and CPU/RAM panels work.  Packaging and input polish are ongoing.
 
----
+## Table of Contents
+- [Features](#features)
+- [Quick Start](#quick-start)
+  - [Prebuilt Binaries](#prebuilt-binaries)
+  - [Build from Source](#build-from-source)
+- [Running](#running)
+- [Configuration](#configuration)
+  - [Themes](#themes)
+  - [Keybinds](#keybinds)
+- [Development](#development)
+- [License](#license)
 
-## ✨ Features
+## Features
+- **Real shell** via `portable-pty`/ConPTY – anything on your `$PATH` works (`git`, `vim`, `tmux`, ...).
+- **GPU rendering** with `winit` + `wgpu`.
+- **ANSI/UTF-8 terminal emulation** built on `vte`.
+- **Theme system** with runtime switcher (`Ctrl/Cmd + Shift + T`).
+- **System panels** for CPU and memory, sampled on a throttled cadence.
 
-- **Real OS shell** via `portable-pty` / ConPTY — anything on your `$PATH` works (`git`, `nmap`, `vim`, `tmux`, etc.).
-- **GPU rendering** (`winit` + `wgpu`) with theme-driven neon UI.
-- **Terminal emulation** (Alacritty stack), DPI-aware sizing (in progress).
-- **Runtime theme switcher** (`Ctrl/Cmd + Shift + T`), TOML themes (dark/light included).
-- **System panels** (CPU / RAM) on a decoupled cadence (250–500 ms).
-- **Ambient effects** (neon grid + scanlines) from theme settings.
+## Quick Start
+### Prebuilt Binaries
+Download the archive for your platform from [Releases](https://github.com/3xecutablefile/terminal-ui/releases) and extract it.
 
----
-
-## 📦 Prebuilt Downloads
-
-| OS    | Arch   | Artifact (example)  |
-|-------|--------|---------------------|
-| Linux | x86_64 | `app-linux-x64.zip` |
+| OS    | Arch   | Artifact example      |
+|-------|--------|----------------------|
+| Linux | x86_64 | `app-linux-x64.zip`  |
 | macOS | x86_64 | `app-macos-x64.zip` |
 
-> If you’re building from source, see **Build from Source** below.
-
----
-
-## Platform support
-
-- ✅ Linux (x86_64)
-- ✅ macOS (x86_64 / Intel)
-- 🚫 Windows (disabled in CI, not officially supported)
-
----
-
-## 💾 Install
-
-Download the archive for your platform from the table above and extract it.
-
-### Linux
+### Build from Source
+Requirements:
+- Rust toolchain (pinned by `rust-toolchain.toml`, ≥1.79)
+- Vulkan (Linux) or Metal (macOS) capable GPU and drivers
 
 ```bash
-tar -xf app-linux-*.tar.gz   # or unzip app-linux-*.zip
-./app                        # run the binary
-````
-
-### macOS
-
-```bash
-unzip app-macos-*.zip
-./app-macos-x64/app
-```
-
----
-
-## 🛠 Build from Source
-
-### Prereqs
-
-* **Rust**: pinned via `rust-toolchain.toml` (≥ 1.79.0)
-* **GPU**: Vulkan (Linux) or Metal (macOS)
-* **Linux**: Vulkan loader (`libvulkan1`) + GPU drivers (Mesa/NVIDIA)
-* **macOS**: 12+ recommended
-
-### Clone & build (macOS/Linux)
-
-```bash
+# clone
 git clone https://github.com/3xecutablefile/terminal-ui.git
 cd terminal-ui
-cargo build --release -p app
-sudo ln -sf "$(pwd)/target/release/app" /usr/local/bin/terminal-ui
 
-# verify the shortcut
-terminal-ui --version
+# build the native workspace
+cargo build --release --manifest-path native/Cargo.toml -p app
+
+# optional: symlink the binary
+sudo ln -sf "$(pwd)/native/target/release/app" /usr/local/bin/terminal-ui
 ```
 
-### Quick build
+### Clear old installation
+If you have a previous build installed, remove its binary and config before installing the new one:
 
 ```bash
-# in repo root
-cargo build --release -p app
-./target/release/app   # run (path varies per OS)
+sudo rm -f /usr/local/bin/terminal-ui       # old symlink or binary
+rm -rf ~/.config/edex-native                # Linux/macOS config and themes
+rm -rf ~/Library/Application\ Support/edex-native  # macOS alt config path
 ```
 
-### Cross-platform targets (examples)
+Then follow the steps above to install the latest version.
 
+## Running
 ```bash
-# Linux x64
-cargo build --release -p app --target x86_64-unknown-linux-gnu
-
-# macOS x64
-cargo build --release -p app --target x86_64-apple-darwin
-```
-
----
-
-## ▶️ Run
-
-The app launches your host shell inside a PTY.
-
-```bash
-# Run with defaults
+# run with defaults
 app
 
-# Choose theme on startup
+# choose a theme on startup
 app --theme "Tron Neon"
 
-# Set initial size (columns/rows) if desired
+# specify initial terminal size
 app --cols 120 --rows 36
 ```
-
 Inside the window:
+- **F1** runs `nmap --version` (diagnostic shortcut).
+- **Ctrl/Cmd + Shift + T** opens the theme switcher.
 
-* Press **F1** to run `nmap --version` (diagnostic shortcut, optional).
-* Press **Ctrl/Cmd + Shift + T** to open the **theme switcher**.
-
----
-
-## 🎨 Themes
-
-* Themes are TOML files.
-* Bundled: `Tron Neon` (dark), `Mono Light`.
-* Locations searched (in order):
-
-  1. `~/.config/edex-native/themes/*.toml`
-  2. `native/app/assets/themes/*.toml` (bundled)
-
-Example (`tron.toml`):
-
-```toml
-[terminal]
-foreground = "#D6EFFF"
-background = "#07121A"
-cursor     = "#66FCF1"
-
-[ui]
-panel_bg     = "rgba(10,18,28,0.85)"
-panel_border = "#0EE7FF"
-text         = "#CFE9FF"
-accent       = "#00E5FF"
-
-[effects]
-grid_color        = "rgba(0,229,255,0.23)"
-grid_spacing      = 28
-scanline_opacity  = 0.06
-```
-
----
-
-## ⚙️ Config
-
-Default config path:
-
-* Linux/macOS: `~/.config/edex-native/config.toml`
-* macOS: `~/Library/Application Support/edex-native/config.toml`
-
-Example:
+## Configuration
+Default config file:
+- Linux/macOS: `~/.config/edex-native/config.toml`
+- macOS Alt: `~/Library/Application Support/edex-native/config.toml`
 
 ```toml
 [appearance]
@@ -165,92 +86,43 @@ theme = "Tron Neon"
 font_family = "JetBrains Mono"
 font_size = 16
 
-[render]
-backend = "auto"         # auto|vulkan|metal|dx12
-grid_spacing = 28
-scanline_opacity = 0.06
-
 [shell]
 login = true
-win_prefer_pwsh = true
 ```
 
----
+### Themes
+TOML theme files are loaded from:
+1. `~/.config/edex-native/themes/*.toml`
+2. `native/app/assets/themes/*.toml` (bundled)
 
-## ⌨️ Keybinds (default)
+Example:
+```toml
+[terminal]
+foreground = "#D6EFFF"
+background = "#07121A"
+cursor     = "#66FCF1"
 
-* **Theme switcher**: `Ctrl/Cmd + Shift + T`
-* **Copy/Paste**: native OS shortcuts (plus OSC-52 for remote apps; size-capped)
-* **Mouse**: SGR mouse reporting (when enabled in terminal apps; in progress)
-* **IME**: winit composition events (in progress)
-
----
-
-## 🧪 Smoke Tests
-
-Inside the app:
-
-```sh
-whoami
-uname -a
-git --version
-nmap --version      # if installed
-vim; htop; tmux     # should render & respond (alt-screen)
-printf '😀 測試 ä̈ café\n'
+[effects]
+grid_color       = "rgba(0,229,255,0.23)"
+scanline_opacity = 0.06
 ```
 
-Resize the window → the grid should reflow without drift.
+### Keybinds
+| Action               | Shortcut                |
+|----------------------|-------------------------|
+| Theme switcher       | `Ctrl/Cmd + Shift + T`  |
+| Copy / Paste         | Standard OS shortcuts   |
 
----
+## Development
+- Workspace is under `native/`
+- Run checks before submitting PRs:
+  ```bash
+  cargo fmt --all --manifest-path native/Cargo.toml -- --check
+  cargo clippy --workspace --manifest-path native/Cargo.toml -- -D warnings
+  cargo test --workspace --manifest-path native/Cargo.toml
+  ```
+- CI builds Linux and macOS x86_64 targets and uploads zipped binaries.
 
-## 🧰 Development
-
-* PTY daemon (`native/ptyd`) speaks NDJSON:
-
-  * Input frame: `{"t":"i","data":"<base64-bytes>"}`
-  * Resize: `{"t":"r","cols":120,"rows":40}`
-  * Signal: `{"t":"s","sig":"INT"}`
-  * Output: `{"t":"o","data":"<base64-bytes>","seq":N}`
-  * Exit: `{"t":"x","code":0}`
-* Native app (`native/app`) renders with `wgpu`, feeds PTY → emulator → GPU.
-
-### CI (GitHub Actions)
-
-* Matrix builds: Linux (x64) and macOS (x64)
-* Steps: `fmt`, `clippy -D warnings`, `test`, `build`
-* Artifacts include binary + `assets/` (themes, shaders)
-
----
-
-## 🐛 Troubleshooting
-
-* **Linux/Wayland**: ensure Vulkan loader (`libvulkan1`) and GPU driver installed.
-* **No colors/Truecolor**: verify `TERM=xterm-256color`.
-* **Huge output (e.g., `yes`)**: PTY → UI buffer is capped; rendering may rate-limit.
-
----
-
-## 🙌 Credits
-
-* **Fork maintainer**: **@3xecutablefile** — project direction, migration plan, native UI, and theme system.
-* Inspired by the original **eDEX-UI** concept. If you reuse original eDEX assets/themes, respect their **GPL-3.0** license.
-* This Rust rewrite’s code is licensed as noted below.
-
----
-
-## 📜 License
-
-* **Rust code (this repository)**: MIT or Apache-2.0 (choose one).
-* **Legacy eDEX assets** (if reused): GPL-3.0. Mixing GPL assets imposes GPL terms on the combined distribution.
-
----
-
-## 📬 Contributing
-
-PRs and issues welcome!
-
-* Run `cargo fmt`, `cargo clippy -D warnings`, `cargo test` before pushing.
-* Add screenshots/gifs for UI PRs (themes/effects).
-* Keep panels on a throttled update cadence; never block the terminal render path.
-
-```
+## License
+- Rust code in this repo: MIT OR Apache-2.0
+- Legacy eDEX assets (if reused): GPL-3.0

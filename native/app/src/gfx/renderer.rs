@@ -1,5 +1,5 @@
-use anyhow::Result;
-use wgpu::CommandEncoder;
+use wgpu::{util::StagingBelt, CommandEncoder, Device, Queue, TextureFormat, TextureView};
+use wgpu_glyph::{ab_glyph, GlyphBrush, GlyphBrushBuilder, Section, Text};
 
 use crate::theme::Theme;
 use crate::ui::theme_switcher::{OverlayBox, RowRenderItem};
@@ -8,18 +8,26 @@ use crate::ui::theme_switcher::{OverlayBox, RowRenderItem};
 #[allow(unused_imports)]
 use crate::ui::panels::Panels;
 
-pub struct Renderer;
+pub struct Renderer {
+    glyph_brush: GlyphBrush<()>,
+    staging_belt: StagingBelt,
+}
 
 impl Renderer {
-    pub fn new() -> Self {
-        Renderer
+    pub fn new(device: &Device, format: TextureFormat) -> Self {
+        let font = ab_glyph::FontArc::try_from_slice(include_bytes!(
+            "../../assets/fonts/DejaVuSansMono.ttf"
+        ))
+        .expect("font slice");
+        let glyph_brush = GlyphBrushBuilder::using_font(font).build(device, format);
+        let staging_belt = StagingBelt::new(1024);
+        Self {
+            glyph_brush,
+            staging_belt,
+        }
     }
 
     pub fn resize(&mut self, _width: u32, _height: u32) {}
-
-    pub fn draw(&mut self) -> Result<()> {
-        Ok(())
-    }
 
     pub fn draw_theme_overlay_begin(
         &mut self,
@@ -53,16 +61,37 @@ impl Renderer {
         // TODO: implement shape rendering
     }
 
-    pub fn draw_text(
+    pub fn draw_text(&mut self, x: f32, y: f32, text: &str, color: &str, px: f32) {
+        let color = self.parse_color(color);
+        self.glyph_brush.queue(Section {
+            screen_position: (x, y),
+            text: vec![Text::new(text).with_color(color).with_scale(px)],
+            ..Section::default()
+        });
+    }
+
+    pub fn flush(
         &mut self,
-        _enc: &mut CommandEncoder,
-        _x: f32,
-        _y: f32,
-        _text: &str,
-        _color: &str,
-        _px: f32,
+        device: &Device,
+        queue: &Queue,
+        mut enc: CommandEncoder,
+        view: &TextureView,
+        width: u32,
+        height: u32,
     ) {
-        // TODO: route to glyph renderer
+        if let Err(e) = self.glyph_brush.draw_queued(
+            device,
+            &mut self.staging_belt,
+            &mut enc,
+            view,
+            width,
+            height,
+        ) {
+            log::error!("glyph_brush error: {e}");
+        }
+        self.staging_belt.finish();
+        queue.submit(Some(enc.finish()));
+        self.staging_belt.recall();
     }
 
     pub fn draw_side_panel(
@@ -101,7 +130,7 @@ impl Renderer {
         self.draw_rounded_rect(enc, x, y, w, h, "rgba(255,255,255,0.06)", "", 0.0);
         let fw = w * value;
         self.draw_rounded_rect(enc, x, y, fw, h, &theme.ui.accent, "", 0.0);
-        self.draw_text(enc, x, y - 8.0, label, &theme.ui.text, 12.0);
+        self.draw_text(x, y - 8.0, label, &theme.ui.text, 12.0);
     }
 
     // === Ambient effects ===
