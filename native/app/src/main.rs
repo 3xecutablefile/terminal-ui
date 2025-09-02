@@ -95,16 +95,25 @@ impl State {
         });
 
         let emu = Emu::new(cols as usize, rows as usize);
+
         let renderer = Renderer::new(&device, config.format);
+=======
+        let renderer = Renderer::new();
+
         let theme = theme::load_theme("tron")?;
         let switcher = ThemeSwitcher::new();
         let panels = Panels::new();
 
         let scale_factor = window.scale_factor();
+
         let logical_width = size.width as f64 / scale_factor;
         let logical_height = size.height as f64 / scale_factor;
         let cell_width = logical_width / cols as f64;
         let cell_height = logical_height / rows as f64;
+=======
+        let cell_width = size.width as f64 / cols as f64;
+        let cell_height = size.height as f64 / rows as f64;
+
 
         Ok(Self {
             surface,
@@ -129,7 +138,14 @@ impl State {
     fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>, scale_factor: Option<f64>) {
         if new_size.width > 0 && new_size.height > 0 {
             if let Some(sf) = scale_factor {
+
                 self.scale_factor = sf;
+=======
+                let ratio = sf / self.scale_factor;
+                self.scale_factor = sf;
+                self.cell_width *= ratio;
+                self.cell_height *= ratio;
+
             }
             self.size = new_size;
             self.config.width = new_size.width;
@@ -137,10 +153,15 @@ impl State {
             self.surface.configure(&self.device, &self.config);
             self.renderer.resize(new_size.width, new_size.height);
 
+
             let logical_width = new_size.width as f64 / self.scale_factor;
             let logical_height = new_size.height as f64 / self.scale_factor;
             let cols = (logical_width / self.cell_width).floor().max(1.0) as u16;
             let rows = (logical_height / self.cell_height).floor().max(1.0) as u16;
+=======
+            let cols = (new_size.width as f64 / self.cell_width).floor().max(1.0) as u16;
+            let rows = (new_size.height as f64 / self.cell_height).floor().max(1.0) as u16;
+
             if let Ok(mut pty) = self._pty.lock() {
                 let _ = pty.resize(cols, rows);
             }
@@ -196,9 +217,12 @@ impl State {
     fn update(&mut self) {
         while let Ok(bytes) = self.rx.try_recv() {
             self.emu.on_bytes(&bytes);
+
         }
         if let Ok(code) = self.rx_exit.try_recv() {
             std::process::exit(code);
+=======
+
         }
         self.panels.tick();
     }

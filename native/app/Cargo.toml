@@ -24,8 +24,11 @@ vte = "0.13"
 unicode-width = "0.1"
 # System panels (use multithread to avoid blocking)
 sysinfo = { version = "0.30", features = ["multithread"] }
+
 wgpu_glyph = "0.21"
 ab_glyph = "0.2"
+=======
+
 
 [features]
 default = []
