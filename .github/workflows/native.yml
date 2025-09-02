@@ -27,25 +27,20 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            target
+            native/target
           key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Cargo fmt
-        working-directory: native
-        run: cargo fmt --all -- --check
+        run: cargo fmt --all --manifest-path native/Cargo.toml -- --check
       - name: Cargo clippy
-        working-directory: native
-        run: cargo clippy --workspace -- -D warnings
+        run: cargo clippy --workspace --manifest-path native/Cargo.toml -- -D warnings
       - name: Cargo test
-        working-directory: native
-        run: cargo test --workspace
+        run: cargo test --workspace --manifest-path native/Cargo.toml
       - name: Build ptyd
-        working-directory: native
-        run: cargo build --release -p ptyd --target ${{ matrix.target }}
+        run: cargo build --release --manifest-path native/Cargo.toml -p ptyd --target ${{ matrix.target }}
       - name: Smoke PTY (bounded)
-        working-directory: native
         shell: bash
         run: |
-          BIN="target/${{ matrix.target }}/release/ptyd"
+          BIN="native/target/${{ matrix.target }}/release/ptyd"
           printf '%s\n' \
             '{"t":"i","data":"ZWNobyBvaw0K"}' \
             '{"t":"i","data":"ZXhpdA0K"}' \
@@ -53,15 +48,13 @@ jobs:
           grep -q '"t":"o"' /tmp/ptyd.out
           grep -q '"t":"x"' /tmp/ptyd.out
       - name: Build app
-        working-directory: native
-        run: cargo build --release --manifest-path app/Cargo.toml --target ${{ matrix.target }}
+        run: cargo build --release --manifest-path native/Cargo.toml -p app --target ${{ matrix.target }}
       - name: Package
-        working-directory: native
         run: |
-          out="target/${{ matrix.target }}/release"
-          mkdir -p dist/${{ matrix.artifact }}
-          cp "$out/app" dist/${{ matrix.artifact }}/
-          rsync -a app/assets/ dist/${{ matrix.artifact }}/assets/
+          out="native/target/${{ matrix.target }}/release"
+          mkdir -p native/dist/${{ matrix.artifact }}
+          cp "$out/app" native/dist/${{ matrix.artifact }}/
+          rsync -a native/app/assets/ native/dist/${{ matrix.artifact }}/assets/
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
