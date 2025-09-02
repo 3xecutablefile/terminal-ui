@@ -1,9 +1,12 @@
+use std::time::{Duration, Instant};
 use sysinfo::{CpuRefreshKind, MemoryRefreshKind, RefreshKind, System};
 
 pub struct Panels {
     sys: System,
-    pub cpu_use: f32,
-    pub mem_use: f32,
+    pub cpu_percent: f32,
+    pub mem_percent: f32,
+    last_sample: Instant,
+    cadence: Duration,
 }
 
 impl Panels {
@@ -17,20 +20,27 @@ impl Panels {
         sys.refresh_memory();
         let mut p = Panels {
             sys,
-            cpu_use: 0.0,
-            mem_use: 0.0,
+            cpu_percent: 0.0,
+            mem_percent: 0.0,
+            last_sample: Instant::now() - Duration::from_millis(1000),
+            cadence: Duration::from_millis(350),
         };
-        p.update();
+        p.tick();
         p
     }
 
-    pub fn update(&mut self) {
+    pub fn tick(&mut self) {
+        // Avoid clippy float-eq lint via checked elapsed
+        if self.last_sample.elapsed() < self.cadence {
+            return;
+        }
+        self.last_sample = Instant::now();
         self.sys.refresh_cpu();
         self.sys.refresh_memory();
-        self.cpu_use = self.sys.global_cpu_info().cpu_usage() / 100.0;
+        self.cpu_percent = self.sys.global_cpu_info().cpu_usage();
         let total = self.sys.total_memory() as f32;
-        self.mem_use = if total > 0.0 {
-            self.sys.used_memory() as f32 / total
+        self.mem_percent = if total > 0.0 {
+            (self.sys.used_memory() as f32 / total) * 100.0
         } else {
             0.0
         };

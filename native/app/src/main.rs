@@ -25,11 +25,15 @@ struct State {
     size: winit::dpi::PhysicalSize<u32>,
     _pty: Arc<Mutex<ptycore::PtyHandle>>,
     rx: Receiver<Vec<u8>>,
+    rx_exit: Receiver<i32>,
     emu: Emu,
     renderer: Renderer,
     theme: theme::Theme,
     switcher: ThemeSwitcher,
     panels: Panels,
+    cell_width: f64,
+    cell_height: f64,
+    scale_factor: f64,
 }
 
 impl State {
@@ -77,13 +81,30 @@ impl State {
                 }
             }
         });
+        let (exit_tx, exit_rx) = unbounded();
         let pty = Arc::new(Mutex::new(handle));
+        let wait_pty = pty.clone();
+        std::thread::spawn(move || {
+            let code = wait_pty
+                .lock()
+                .ok()
+                .and_then(|mut h| h.wait().ok())
+                .map(|s| s.exit_code() as i32)
+                .unwrap_or(0);
+            let _ = exit_tx.send(code);
+        });
 
-        let emu = Emu::new(cols, rows);
-        let renderer = Renderer::new();
+        let emu = Emu::new(cols as usize, rows as usize);
+        let renderer = Renderer::new(&device, config.format);
         let theme = theme::load_theme("tron")?;
         let switcher = ThemeSwitcher::new();
         let panels = Panels::new();
+
+        let scale_factor = window.scale_factor();
+        let logical_width = size.width as f64 / scale_factor;
+        let logical_height = size.height as f64 / scale_factor;
+        let cell_width = logical_width / cols as f64;
+        let cell_height = logical_height / rows as f64;
 
         Ok(Self {
             surface,
@@ -93,22 +114,38 @@ impl State {
             size,
             _pty: pty,
             rx,
+            rx_exit: exit_rx,
             emu,
             renderer,
             theme,
             switcher,
             panels,
+            cell_width,
+            cell_height,
+            scale_factor,
         })
     }
 
-    fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
+    fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>, scale_factor: Option<f64>) {
         if new_size.width > 0 && new_size.height > 0 {
+            if let Some(sf) = scale_factor {
+                self.scale_factor = sf;
+            }
             self.size = new_size;
             self.config.width = new_size.width;
             self.config.height = new_size.height;
             self.surface.configure(&self.device, &self.config);
             self.renderer.resize(new_size.width, new_size.height);
-            self.emu.resize(0, 0);
+
+            // derive terminal geometry in logical units (HiDPI aware)
+            let logical_width = new_size.width as f64 / self.scale_factor;
+            let logical_height = new_size.height as f64 / self.scale_factor;
+            let cols = (logical_width / self.cell_width).floor().max(1.0) as u16;
+            let rows = (logical_height / self.cell_height).floor().max(1.0) as u16;
+            if let Ok(mut pty) = self._pty.lock() {
+                let _ = pty.resize(cols, rows);
+            }
+            self.emu.resize(cols as usize, rows as usize);
         }
     }
 
@@ -159,9 +196,12 @@ impl State {
 
     fn update(&mut self) {
         while let Ok(bytes) = self.rx.try_recv() {
-            self.emu.feed(&bytes);
+            self.emu.on_bytes(&bytes);
         }
-        self.panels.update();
+        if let Ok(code) = self.rx_exit.try_recv() {
+            std::process::exit(code);
+        }
+        self.panels.tick();
     }
 
     fn render(&mut self) -> Result<(), SurfaceError> {
@@ -202,7 +242,7 @@ impl State {
             64.0,
             pw - 48.0,
             16.0,
-            self.panels.cpu_use,
+            self.panels.cpu_percent,
             "CPU",
             &self.theme,
         );
@@ -212,7 +252,7 @@ impl State {
             112.0,
             pw - 48.0,
             16.0,
-            self.panels.mem_use,
+            self.panels.mem_percent,
             "RAM",
             &self.theme,
         );
@@ -225,9 +265,29 @@ impl State {
             self.renderer
                 .draw_theme_overlay_rows(&mut encoder, &rows, &self.theme);
         }
-        self.queue.submit(Some(encoder.finish()));
+
+        let fg = self.theme.terminal.foreground.clone();
+        let px = (self.cell_height * self.scale_factor) as f32;
+        for y in 0..self.emu.rows {
+            let mut line = String::with_capacity(self.emu.cols);
+            for x in 0..self.emu.cols {
+                let i = y * self.emu.cols + x;
+                let cell = self.emu.grid[i];
+                line.push(cell.ch);
+            }
+            let y_px = y as f32 * px;
+            self.renderer.draw_text(0.0, y_px, &line, &fg, px);
+        }
+
+        self.renderer.flush(
+            &self.device,
+            &self.queue,
+            encoder,
+            &view,
+            self.size.width,
+            self.size.height,
+        );
         output.present();
-        let _ = self.renderer.draw();
         Ok(())
     }
 }
@@ -255,10 +315,12 @@ fn main() -> Result<()> {
                 if !state.input(&event) {
                     match event {
                         WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
-                        WindowEvent::Resized(size) => state.resize(size),
-                        WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
-                            state.resize(*new_inner_size)
-                        }
+                        WindowEvent::Resized(size) => state.resize(size, None),
+                        WindowEvent::ScaleFactorChanged {
+                            new_inner_size,
+                            scale_factor,
+                            ..
+                        } => state.resize(*new_inner_size, Some(scale_factor)),
                         _ => {}
                     }
                 }
@@ -267,7 +329,7 @@ fn main() -> Result<()> {
                 state.update();
                 match state.render() {
                     Ok(_) => {}
-                    Err(wgpu::SurfaceError::Lost) => state.resize(state.size),
+                    Err(wgpu::SurfaceError::Lost) => state.resize(state.size, None),
                     Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
                     Err(e) => eprintln!("render error: {e:?}"),
                 }
