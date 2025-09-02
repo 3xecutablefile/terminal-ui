@@ -112,6 +112,63 @@ grid_color       = "rgba(0,229,255,0.23)"
 scanline_opacity = 0.06
 ```
 
+
+Resize the window → the grid should reflow without drift.
+
+---
+
+## 🧰 Development
+
+* PTY daemon (`native/ptyd`) speaks NDJSON:
+
+  * Input frame: `{"t":"i","data":"<base64-bytes>"}`
+  * Resize: `{"t":"r","cols":120,"rows":40}`
+  * Signal: `{"t":"s","sig":"INT"}`
+  * Output: `{"t":"o","data":"<base64-bytes>","seq":N}`
+  * Exit: `{"t":"x","code":0}` (includes string `signal` when terminated by one, e.g., `{"t":"x","code":1,"signal":"Terminated"}`)
+* Native app (`native/app`) renders with `wgpu`, feeds PTY → emulator → GPU.
+
+### CI (GitHub Actions)
+
+* Matrix builds: Linux (x64) and macOS (x64)
+* Steps: `fmt`, `clippy -D warnings`, `test`, `build`
+* Artifacts include binary + `assets/` (themes, shaders)
+
+---
+
+## 🐛 Troubleshooting
+
+* **Linux/Wayland**: ensure Vulkan loader (`libvulkan1`) and GPU driver installed.
+* **No colors/Truecolor**: verify `TERM=xterm-256color`.
+* **Huge output (e.g., `yes`)**: PTY → UI buffer is capped; rendering may rate-limit.
+
+---
+
+## 🙌 Credits
+
+* **Fork maintainer**: **@3xecutablefile** — project direction, migration plan, native UI, and theme system.
+* Inspired by the original **eDEX-UI** concept. If you reuse original eDEX assets/themes, respect their **GPL-3.0** license.
+* This Rust rewrite’s code is licensed as noted below.
+
+---
+
+## 📜 License
+
+* **Rust code (this repository)**: MIT or Apache-2.0 (choose one).
+* **Legacy eDEX assets** (if reused): GPL-3.0. Mixing GPL assets imposes GPL terms on the combined distribution.
+
+---
+
+## 📬 Contributing
+
+PRs and issues welcome!
+
+* Run `cargo fmt`, `cargo clippy -D warnings`, `cargo test` before pushing.
+* Add screenshots/gifs for UI PRs (themes/effects).
+* Keep panels on a throttled update cadence; never block the terminal render path.
+
+```
+=======
 ### Keybinds
 | Action               | Shortcut                |
 |----------------------|-------------------------|
@@ -131,3 +188,4 @@ scanline_opacity = 0.06
 ## License
 - Rust code in this repo: MIT OR Apache-2.0
 - Legacy eDEX assets (if reused): GPL-3.0
+

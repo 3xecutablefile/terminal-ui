@@ -1,3 +1,4 @@
+use std::convert::TryFrom;
 use std::io::{self, BufRead, Read, Write};
 use std::sync::{Arc, Mutex};
 
@@ -26,7 +27,11 @@ enum FromPty {
     #[serde(rename = "o")]
     Output { data: String, seq: u64 },
     #[serde(rename = "x")]
-    Exit { code: i32 },
+    Exit {
+        code: i32,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        signal: Option<String>,
+    },
 }
 
 fn main() -> Result<()> {
@@ -97,9 +102,12 @@ fn main() -> Result<()> {
     }
 
     let status = child.wait()?;
-    let code = status.exit_code() as i32;
+    let signal = status.signal().map(|s| s.to_string());
+    let code = i32::try_from(status.exit_code())
+        .ok()
+        .unwrap_or_else(|| signal.as_ref().map(|_| 1).unwrap_or(1));
     let mut w = stdout.lock().unwrap();
-    let msg = FromPty::Exit { code };
+    let msg = FromPty::Exit { code, signal };
     serde_json::to_writer(&mut *w, &msg)?;
     w.write_all(b"\n")?;
     w.flush()?;
