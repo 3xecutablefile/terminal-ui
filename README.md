@@ -49,8 +49,24 @@ cargo build --release --manifest-path native/Cargo.toml -p app
 sudo ln -sf "$(pwd)/native/target/release/app" /usr/local/bin/terminal-ui
 ```
 
+
+### Clear old installation
+If you have a previous build installed, remove its binary and config before installing the new one:
+
+```bash
+sudo rm -f /usr/local/bin/terminal-ui       # old symlink or binary
+rm -rf ~/.config/edex-native                # Linux/macOS config and themes
+rm -rf ~/Library/Application\ Support/edex-native  # macOS alt config path
+```
+
+Then follow the steps above to install the latest version.
+
 ## Running
 ```bash
+=======
+## Running
+```bash
+
 # run with defaults
 app
 
