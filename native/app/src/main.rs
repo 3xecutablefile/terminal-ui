@@ -25,6 +25,7 @@ struct State {
     size: winit::dpi::PhysicalSize<u32>,
     _pty: Arc<Mutex<ptycore::PtyHandle>>,
     rx: Receiver<Vec<u8>>,
+    rx_exit: Receiver<i32>,
     emu: Emu,
     renderer: Renderer,
     theme: theme::Theme,
@@ -80,7 +81,18 @@ impl State {
                 }
             }
         });
+        let (exit_tx, exit_rx) = unbounded();
         let pty = Arc::new(Mutex::new(handle));
+        let wait_pty = pty.clone();
+        std::thread::spawn(move || {
+            let code = wait_pty
+                .lock()
+                .ok()
+                .and_then(|mut h| h.wait().ok())
+                .map(|s| s.exit_code() as i32)
+                .unwrap_or(0);
+            let _ = exit_tx.send(code);
+        });
 
         let emu = Emu::new(cols as usize, rows as usize);
         let renderer = Renderer::new(&device, config.format);
@@ -102,6 +114,7 @@ impl State {
             size,
             _pty: pty,
             rx,
+            rx_exit: exit_rx,
             emu,
             renderer,
             theme,
@@ -183,6 +196,9 @@ impl State {
     fn update(&mut self) {
         while let Ok(bytes) = self.rx.try_recv() {
             self.emu.on_bytes(&bytes);
+        }
+        if let Ok(code) = self.rx_exit.try_recv() {
+            std::process::exit(code);
         }
         self.panels.tick();
     }
