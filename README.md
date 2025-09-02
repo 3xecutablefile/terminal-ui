@@ -211,7 +211,7 @@ Resize the window → the grid should reflow without drift.
   * Resize: `{"t":"r","cols":120,"rows":40}`
   * Signal: `{"t":"s","sig":"INT"}`
   * Output: `{"t":"o","data":"<base64-bytes>","seq":N}`
-  * Exit: `{"t":"x","code":0}` (includes `signal` when terminated by one, e.g., `{"t":"x","code":1,"signal":9}`)
+  * Exit: `{"t":"x","code":0}` (includes string `signal` when terminated by one, e.g., `{"t":"x","code":1,"signal":"Terminated"}`)
 * Native app (`native/app`) renders with `wgpu`, feeds PTY → emulator → GPU.
 
 ### CI (GitHub Actions)
