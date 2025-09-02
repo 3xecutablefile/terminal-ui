@@ -49,6 +49,7 @@ cargo build --release --manifest-path native/Cargo.toml -p app
 sudo ln -sf "$(pwd)/native/target/release/app" /usr/local/bin/terminal-ui
 ```
 
+
 ### Clear old installation
 If you have a previous build installed, remove its binary and config before installing the new one:
 
@@ -62,6 +63,10 @@ Then follow the steps above to install the latest version.
 
 ## Running
 ```bash
+=======
+## Running
+```bash
+
 # run with defaults
 app
 
