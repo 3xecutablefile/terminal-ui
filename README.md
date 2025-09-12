@@ -20,7 +20,7 @@ Highlights
 What’s different from eDEX‑UI
 - Branding: App name, product name, appId, window title, and boot text now say “HackerUI — by 3xecutable File”.
 - DMG artifacts: `HackerUI-macOS-arm64.dmg` and `HackerUI-macOS-x64.dmg` with volume label “HackerUI”.
-- Icons: builds reference `media/hackerui.icns` and `media/hackerui.ico`.
+- Icons: builds reference `media/hackerui.icns` (macOS), `media/hackerui.ico` (Windows), `media/hackerui.png` (Linux).
 - Network widget: simplified and faster. No more `ifconfig`/`ipconfig`/`netstat` dumps.
   - Local IP: macOS `ipconfig getifaddr en0` (fallback en1), Linux `hostname -I | awk '{print $1}'`, Windows parses `ipconfig`.
   - Public IP: `curl -s ifconfig.me` (fallback `curl -s api.ipify.org`), cached for 60s.
@@ -28,27 +28,27 @@ What’s different from eDEX‑UI
 
 Quick start
 1) Requirements
-- Node.js 22, npm 10+ (or pnpm/yarn if you prefer)
+- Node.js 22, npm 10+
 - macOS, Linux, or Windows
 
 2) Install and run (development)
 - Install deps: `npm install`
 - Start: `npm start`
-  - This launches Electron 12 with the app in fullscreen. Use F11 if windowed mode is allowed.
+  - Launches Electron 12 in fullscreen (unless settings allow windowed mode).
 
 3) Build binaries
 - macOS (x64 + arm64):
   - Prebuild native modules: `npm run prebuild-darwin`
   - Build: `npm run build-darwin`
   - Output: `dist/HackerUI-macOS-arm64.dmg`, `dist/HackerUI-macOS-x64.dmg`
-- Linux (x64/ia32/arm/arm64):
+- Linux (x64/arm64):
   - Prebuild: `npm run prebuild-linux`
   - Build: `npm run build-linux`
   - Output: `dist/HackerUI-Linux-<arch>.AppImage`
-- Windows (x64/ia32):
+- Windows (x64):
   - Prebuild: `npm run prebuild-windows`
   - Build: `npm run build-windows`
-  - Output: `dist/HackerUI-Windows-<arch>.exe`
+  - Output: `dist/HackerUI-Windows-x64.exe`
 
 Features
 - Terminal emulator with tabs, colors, mouse, and curses support (xterm.js based).
@@ -78,7 +78,7 @@ Configuration
 Assets and icons
 - macOS icon: `media/hackerui.icns`
 - Windows icon: `media/hackerui.ico`
-- Linux: `media/linuxIcons` directory
+- Linux icon: `media/hackerui.png`
 - Replace these files with your own artwork to customize the look. The repo currently includes placeholders derived from the original icons.
 
 Keyboard shortcuts
@@ -107,49 +107,44 @@ Credits
 Disclaimer
 - HackerUI is an independent, modded fork of the archived eDEX‑UI project. It is not affiliated with or endorsed by the original author.
 
-## Useful commands for the nerds
+---
 
-**IMPORTANT NOTE:** the following instructions are meant for running eDEX from the latest unoptimized, unreleased, development version. If you'd like to get stable software instead, refer to [these](#how-do-i-get-it) instructions.
+## 🧰 Native (Rust) Workspace
 
-#### Starting from source:
-on *nix systems (You'll need the Xcode command line tools on macOS):
-- clone the repository
-- `npm run install-linux`
-- `npm run start`
+An experimental native rewrite lives under `native/` with a wgpu UI and a PTY daemon.
 
-on Windows:
-- start cmd or powershell **as administrator**
-- clone the repository
-- `npm run install-windows`
-- `npm run start`
+- PTY daemon (`native/ptyd`) speaks NDJSON:
+  - Input frame: `{"t":"i","data":"<base64-bytes>"}`
+  - Resize: `{"t":"r","cols":120,"rows":40}`
+  - Signal: `{"t":"s","sig":"INT"}`
+  - Output: `{"t":"o","data":"<base64-bytes>","seq":N}`
+  - Exit: `{"t":"x","code":0}` (includes string `signal` when terminated by one, e.g., `{"t":"x","code":1,"signal":"Terminated"}`)
+- Native app (`native/app`) renders with `wgpu`, feeds PTY → emulator → GPU.
 
-#### Building
-Note: Due to native modules, you can only build targets for the host OS you are using.
+### Native CI (GitHub Actions)
 
-- `npm install` (NOT `install-linux` or `install-windows`)
-- `npm run build-linux` or `build-windows` or `build-darwin`
+- Matrix builds: Linux (x64) and macOS (x64)
+- Steps: `fmt`, `clippy -D warnings`, `test`, `build`
+- Artifacts include binary + `assets/` (themes, shaders)
 
-The script will minify the source code, recompile native dependencies and create distributable assets in the `dist` folder.
+### Native Development
 
-#### Getting the bleeding edge
-If you're interested in running the latest in-development version but don't want to compile source code yourself, you can can get pre-built nightly binaries on [GitHub Actions](https://github.com/GitSquared/edex-ui/actions): click the latest commits, and download the artifacts bundle for your OS.
+- Workspace lives under `native/`
+- Run checks before submitting PRs:
+  ```bash
+  cargo fmt --all --manifest-path native/Cargo.toml -- --check
+  cargo clippy --workspace --manifest-path native/Cargo.toml -- -D warnings
+  cargo test --workspace --manifest-path native/Cargo.toml
+  ```
 
-## Credits
-eDEX-UI's source code was primarily written by me, [Squared](https://github.com/GitSquared). If you want to get in touch with me or find other projects I'm involved in, check out [my website](https://gaby.dev).
+### Keybinds
+| Action               | Shortcut                |
+|----------------------|-------------------------|
+| Theme switcher       | `Ctrl/Cmd + Shift + T`  |
+| Copy / Paste         | Standard OS shortcuts   |
 
-[PixelyIon](https://github.com/PixelyIon) helped me get started with Windows compatibility and offered some precious advice when I started to work on this project seriously.
+### Native License
 
-[IceWolf](https://soundcloud.com/iamicewolf) composed the sound effects on v2.1.x and above. He makes really cool stuff, check out his music!
+- Rust code in `native/`: MIT OR Apache-2.0
+- Legacy eDEX assets (if reused): GPL-3.0
 
-## Thanks
-Of course, eDEX would never have existed if I hadn't stumbled upon the amazing work of [Seena](https://github.com/seenaburns) on [r/unixporn](https://reddit.com/r/unixporn).
-
-This project uses a bunch of open-source libraries, frameworks and tools, see [the full dependency graph](https://github.com/GitSquared/edex-ui/network/dependencies).
-
-I want to namely thank the developers behind [xterm.js](https://github.com/xtermjs/xterm.js), [systeminformation](https://github.com/sebhildebrandt/systeminformation) and [SmoothieCharts](https://github.com/joewalnes/smoothie).
-
-Huge thanks to [Rob "Arscan" Scanlon](https://github.com/arscan) for making the fantastic [ENCOM Globe](https://github.com/arscan/encom-globe), also inspired by the TRON: Legacy movie, and distributing it freely. His work really puts the icing on the cake.
-
-## Licensing
-
-Licensed under the [GPLv3.0](https://github.com/GitSquared/edex-ui/blob/master/LICENSE).

@@ -1,0 +1,38 @@
+[meta]
+name = "Mono Light"
+author = "Example"
+variant = "light"
+
+[terminal]
+foreground = "#000000"
+background = "#FFFFFF"
+cursor     = "#000000"
+selection  = "#C0C0C0"
+black      = "#000000"
+red        = "#D70000"
+green      = "#008700"
+yellow     = "#AF8700"
+blue       = "#005F87"
+magenta    = "#870087"
+cyan       = "#008787"
+white      = "#E4E4E4"
+bright_black   = "#7F7F7F"
+bright_red     = "#FF0000"
+bright_green   = "#00AF00"
+bright_yellow  = "#FFD700"
+bright_blue    = "#0087AF"
+bright_magenta = "#AF00AF"
+bright_cyan    = "#00AFAF"
+bright_white   = "#FFFFFF"
+
+[ui]
+panel_bg     = "rgba(255,255,255,0.85)"
+panel_border = "#000000"
+text         = "#000000"
+accent       = "#005F87"
+
+[effects]
+grid_color       = "rgba(0,0,0,0.15)"
+grid_spacing     = 28
+scanline_opacity = 0.04
+glow_intensity   = 0.30
