@@ -1,8 +1,8 @@
 {
-  "name": "edex-ui",
-  "productName": "eDEX-UI",
+  "name": "hackerui",
+  "productName": "HackerUI",
   "version": "2.2.8",
-  "description": "eDEX-UI sci-fi interface",
+  "description": "HackerUI — a cyber-console environment by 3xecutable File",
   "keywords": [
     "desktop",
     "sci-fi",
@@ -16,7 +16,7 @@
     "type": "git",
     "url": "git+https://github.com/GitSquared/edex-ui.git"
   },
-  "author": "Gabriel 'Squared' SAILLARD <gabriel@saillard.dev> (https://gaby.dev)",
+  "author": "3xecutable File",
   "license": "GPL-3.0",
   "bugs": {
     "url": "https://github.com/GitSquared/edex-ui/issues"
@@ -31,7 +31,7 @@
     "maxmind": "4.3.2",
     "mime-types": "^2.1.33",
     "nanoid": "3.1.30",
-    "node-pty": "0.10.1",
+    "node-pty": "^1.0.0",
     "pdfjs-dist": "2.11.338",
     "pretty-bytes": "5.6.0",
     "shell-env": "3.0.1",
@@ -47,6 +47,9 @@
     "xterm-addon-fit": "0.5.0",
     "xterm-addon-ligatures": "0.5.1",
     "xterm-addon-webgl": "^0.11.2"
+  },
+  "overrides": {
+    "node-pty": "^1.0.0"
   },
   "optionalDependencies": {
     "osx-temperature-sensor": "1.0.7"

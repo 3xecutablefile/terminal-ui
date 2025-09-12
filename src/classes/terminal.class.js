@@ -109,7 +109,7 @@ class Terminal {
                 fontWeightBold: window.theme.terminal.fontWeightBold || "bold",
                 letterSpacing: window.theme.terminal.letterSpacing || 0,
                 lineHeight: window.theme.terminal.lineHeight || 1,
-                scrollback: 1500,
+                scrollback: Number(window.settings.termScrollback) || 1500,
                 bellStyle: "none",
                 theme: {
                     foreground: window.theme.terminal.foreground,
@@ -138,7 +138,9 @@ class Terminal {
             let fitAddon = new FitAddon();
             this.term.loadAddon(fitAddon);
             this.term.open(document.getElementById(opts.parentId));
-            this.term.loadAddon(new WebglAddon());
+            if (window.settings.gpuAcceleration !== false) {
+                try { this.term.loadAddon(new WebglAddon()); } catch(_) {}
+            }
             let ligaturesAddon = new LigaturesAddon();
             this.term.loadAddon(ligaturesAddon);
             this.term.attachCustomKeyEventHandler(e => {
@@ -406,13 +408,45 @@ class Terminal {
                 }
             }, 1000);
 
-            this.tty = this.Pty.spawn(opts.shell || "bash", (opts.params.length > 0 ? opts.params : (process.platform === "win32" ? [] : ["--login"])), {
-                name: opts.env.TERM || "xterm-256color",
-                cols: 80,
-                rows: 24,
-                cwd: opts.cwd || process.env.PWD,
-                env: opts.env || process.env
-            });
+            // Normalize shell params to an array and provide sensible defaults per platform
+            const parseArgString = s => {
+                if (typeof s !== 'string') return [];
+                let args = [];
+                let current = '';
+                let inSingle = false, inDouble = false, escape = false;
+                for (let i = 0; i < s.length; i++) {
+                    const ch = s[i];
+                    if (escape) { current += ch; escape = false; continue; }
+                    if (ch === '\\') { escape = true; continue; }
+                    if (ch === '"' && !inSingle) { inDouble = !inDouble; continue; }
+                    if (ch === "'" && !inDouble) { inSingle = !inSingle; continue; }
+                    if (/\s/.test(ch) && !inSingle && !inDouble) {
+                        if (current.length) { args.push(current); current = ''; }
+                        continue;
+                    }
+                    current += ch;
+                }
+                if (current.length) args.push(current);
+                return args;
+            };
+
+            const paramsArray = Array.isArray(opts.params)
+                ? opts.params
+                : (typeof opts.params === 'string' ? parseArgString(opts.params.trim()) : []);
+
+            const defaultArgs = (process.platform === "win32") ? [] : ["-l"];
+            const ptyArgs = (paramsArray && paramsArray.length > 0) ? paramsArray : defaultArgs;
+
+            this.tty = this.Pty.spawn(opts.shell || (process.platform === 'win32' ? (process.env.COMSPEC || 'cmd.exe') : (process.env.SHELL || 'bash')),
+                ptyArgs,
+                {
+                    name: (opts.env && opts.env.TERM) || "xterm-256color",
+                    cols: 80,
+                    rows: 24,
+                    cwd: opts.cwd || process.env.PWD || process.cwd(),
+                    env: opts.env || process.env
+                }
+            );
 
             this.tty.onExit((code, signal) => {
                 this._closed = true;

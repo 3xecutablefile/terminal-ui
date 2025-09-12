@@ -15,9 +15,16 @@ class Toplist {
         this.currentlyUpdating = false;
 
         this.updateList();
-        this.listUpdater = setInterval(() => {
-            this.updateList();
-        }, 2000);
+        this._applyPerfMode = () => {
+            const fast = (m) => window.__perf ? window.__perf.getFast(m) : 1000*m;
+            const slow = (m) => window.__perf ? window.__perf.getSlow(m) : 5000*m;
+            const use = (fm, sm) => (window.__perf && window.__perf.active ? fm : sm);
+
+            if (this.listUpdater) clearInterval(this.listUpdater);
+            this.listUpdater = setInterval(() => this.updateList(), use(fast(2.0), slow(6.0)));
+        };
+        this._applyPerfMode();
+        window.addEventListener('perf-mode-change', this._applyPerfMode);
     }
     updateList() {
         if (this.currentlyUpdating) return;

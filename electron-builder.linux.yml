@@ -1,0 +1,7 @@
+npmRebuild: true
+linux:
+  target:
+    - target: deb
+      arch:
+        - x64
+  category: System
