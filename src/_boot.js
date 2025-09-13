@@ -3,7 +3,7 @@ const {app, BrowserWindow, dialog, shell} = require("electron");
 
 process.on("uncaughtException", e => {
     signale.fatal(e);
-    dialog.showErrorBox("eDEX-UI crashed", e.message || "Cannot retrieve error message.");
+    dialog.showErrorBox("HackerUI crashed", e.message || "Cannot retrieve error message.");
     if (tty) {
         tty.close();
     }
@@ -17,13 +17,13 @@ process.on("uncaughtException", e => {
     process.exit(1);
 });
 
-signale.start(`Starting eDEX-UI v${app.getVersion()}`);
+signale.start(`Starting HackerUI v${app.getVersion()}`);
 signale.info(`With Node ${process.versions.node} and Electron ${process.versions.electron}`);
 signale.info(`Renderer is Chrome ${process.versions.chrome}`);
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
-    signale.fatal("Error: Another instance of eDEX is already running. Cannot proceed.");
+    signale.fatal("Error: Another instance of HackerUI is already running. Cannot proceed.");
     app.exit(1);
 }
 
@@ -58,10 +58,24 @@ const innerFontsDir = path.join(__dirname, "assets/fonts");
 if (process.env.http_proxy) delete process.env.http_proxy;
 if (process.env.https_proxy) delete process.env.https_proxy;
 
-// Bypass GPU acceleration blocklist, trading a bit of stability for a great deal of performance, mostly on Linux
-app.commandLine.appendSwitch("ignore-gpu-blocklist");
-app.commandLine.appendSwitch("enable-gpu-rasterization");
-app.commandLine.appendSwitch("enable-video-decode");
+// GPU acceleration toggles: allow disabling on low-power/ARM devices
+let __earlySettings = {};
+try {
+    // Ensure settings file exists before reading
+    const sPath = require("path").join(electron.app.getPath("userData"), "settings.json");
+    if (require("fs").existsSync(sPath)) {
+        __earlySettings = JSON.parse(require("fs").readFileSync(sPath, {encoding: "utf-8"}));
+    }
+} catch(_) { /* ignore */ }
+
+if (__earlySettings && __earlySettings.gpuAcceleration === false) {
+    app.disableHardwareAcceleration();
+} else {
+    // Bypass GPU acceleration blocklist, trading a bit of stability for performance, mostly on Linux
+    app.commandLine.appendSwitch("ignore-gpu-blocklist");
+    app.commandLine.appendSwitch("enable-gpu-rasterization");
+    app.commandLine.appendSwitch("enable-video-decode");
+}
 
 // Fix userData folder not setup on Windows
 try {
@@ -72,13 +86,20 @@ try {
 }
 // Create default settings file
 if (!fs.existsSync(settingsFile)) {
+    const defaultShell = (process.platform === "win32")
+        ? (process.env.COMSPEC || "powershell.exe")
+        : (process.env.SHELL || "/bin/bash");
     fs.writeFileSync(settingsFile, JSON.stringify({
-        shell: (process.platform === "win32") ? "powershell.exe" : "bash",
+        shell: defaultShell,
         shellArgs: '',
         cwd: electron.app.getPath("userData"),
         keyboard: "en-US",
         theme: "tron",
         termFontSize: 15,
+        termScrollback: 1000,
+        gpuAcceleration: true,
+        adaptiveThrottling: true,
+        statsRefreshMs: 1000,
         audio: true,
         audioVolume: 1.0,
         disableFeedbackAudio: false,
@@ -178,7 +199,7 @@ function createWindow(settings) {
     let {x, y, width, height} = display.bounds;
     width++; height++;
     win = new BrowserWindow({
-        title: "eDEX-UI",
+        title: "HackerUI — by 3xecutable File",
         x,
         y,
         width,
@@ -194,7 +215,7 @@ function createWindow(settings) {
             devTools: true,
 	    enableRemoteModule: true,
             contextIsolation: false,
-            backgroundThrottling: false,
+            backgroundThrottling: settings.adaptiveThrottling !== false,
             webSecurity: true,
             nodeIntegration: true,
             nodeIntegrationInSubFrames: false,
@@ -208,6 +229,12 @@ function createWindow(settings) {
         protocol: 'file:',
         slashes: true
     }));
+
+    // Ensure the window title stays versionless regardless of document.title changes
+    win.on('page-title-updated', (e) => {
+        e.preventDefault();
+        try { win.setTitle("HackerUI — by 3xecutable File"); } catch(_) {}
+    });
 
     signale.complete("Frontend window created!");
     win.show();
@@ -224,19 +251,37 @@ app.on('ready', async () => {
     signale.pending(`Loading settings file...`);
     let settings = require(settingsFile);
     signale.pending(`Resolving shell path...`);
+    // Fallback to system default shell if not set
+    if (!settings.shell || typeof settings.shell !== 'string' || settings.shell.trim() === '') {
+        settings.shell = (process.platform === "win32")
+            ? (process.env.COMSPEC || "powershell.exe")
+            : (process.env.SHELL || "/bin/bash");
+    }
     settings.shell = await which(settings.shell).catch(e => { throw(e) });
     signale.info(`Shell found at ${settings.shell}`);
     signale.success(`Settings loaded!`);
 
     if (!require("fs").existsSync(settings.cwd)) throw new Error("Configured cwd path does not exist.");
 
-    // See #366
-    let cleanEnv = await require("shell-env")(settings.shell).catch(e => { throw e; });
+    // See #366 — get a sane PATH from the user's login shell (macOS/Linux).
+    // On Windows, fall back to process.env which already contains a correct PATH.
+    const shellEnv = require("shell-env");
+    let cleanEnv;
+    if (process.platform === 'win32') {
+        cleanEnv = Object.assign({}, process.env);
+    } else {
+        try {
+            cleanEnv = await shellEnv(settings.shell);
+        } catch (e) {
+            signale.warn("shell-env failed; falling back to process.env", e && e.message ? e.message : e);
+            cleanEnv = Object.assign({}, process.env);
+        }
+    }
 
     Object.assign(cleanEnv, {
         TERM: "xterm-256color",
         COLORTERM: "truecolor",
-        TERM_PROGRAM: "eDEX-UI",
+        TERM_PROGRAM: "HackerUI",
         TERM_PROGRAM_VERSION: app.getVersion()
     }, settings.env);
 
@@ -356,6 +401,15 @@ app.on('web-contents-created', (e, contents) => {
     // Prevent loading something else than the UI
     contents.on('will-navigate', (e, url) => {
         if (url !== contents.getURL()) e.preventDefault();
+    });
+});
+
+// Ensure all future BrowserWindows keep the same versionless title
+app.on('browser-window-created', (event, window) => {
+    try { window.setTitle("HackerUI — by 3xecutable File"); } catch(_) {}
+    window.on('page-title-updated', (e) => {
+        e.preventDefault();
+        try { window.setTitle("HackerUI — by 3xecutable File"); } catch(_) {}
     });
 });
 

@@ -42,9 +42,16 @@ class Sysinfo {
             this.updateUptime();
         }, 60000);
         this.updateBattery();
-        this.batteryUpdater = setInterval(() => {
-            this.updateBattery();
-        }, 3000);
+        this._applyPerfMode = () => {
+            const fast = (m) => window.__perf ? window.__perf.getFast(m) : 1000*m;
+            const slow = (m) => window.__perf ? window.__perf.getSlow(m) : 5000*m;
+            const use = (fm, sm) => (window.__perf && window.__perf.active ? fm : sm);
+
+            if (this.batteryUpdater) clearInterval(this.batteryUpdater);
+            this.batteryUpdater = setInterval(() => this.updateBattery(), use(fast(3.0), slow(10.0)));
+        };
+        this._applyPerfMode();
+        window.addEventListener('perf-mode-change', this._applyPerfMode);
     }
     updateDate() {
         let time = new Date();

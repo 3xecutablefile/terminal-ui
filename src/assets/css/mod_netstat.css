@@ -47,31 +47,28 @@ div#mod_netstat_inner > h1:first-child > i {
 }
 
 div#mod_netstat_innercontainer {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    grid-template-rows: 1fr;
-    grid-gap: 0.46vh;
+    display: block;
     position: relative;
-    top: -1.5vh;
+    top: -1.2vh;
 }
 
 div#mod_netstat_innercontainer div {
-    padding: 0.925vh 0.46vh;
+    padding: 0.6vh 0.6vh;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    justify-content: space-around;
+    justify-content: center;
 }
 
-div#mod_netstat_innercontainer div:nth-child(2) {
-    grid-column: 2 / 4;
-}
+/* no grid layout in compact mode */
 
 div#mod_netstat_innercontainer h1 {
-    margin: 0vh;
-    opacity: 0.5;
+    display: none;
 }
 
 div#mod_netstat_innercontainer h2 {
     margin: 0vh;
+    line-height: 1.6vh;
 }
+
+/* removed heavy command output section to reduce lag */

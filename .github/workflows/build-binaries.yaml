@@ -1,0 +1,146 @@
+name: Build packaged binaries
+
+on: [push, pull_request, create]
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+    - name: Cache npm
+      uses: actions/cache@v4
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+    - name: Cache Electron binaries
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/electron
+        key: ${{ runner.os }}-electron-${{ hashFiles('**/package-lock.json') }}
+    - name: Install dependencies
+      run: npm ci
+    - name: Prebuild for x64
+      run: TARGET_ARCH=x64 npm run prebuild-linux
+    - name: Build AppImage (x64)
+      run: ./node_modules/.bin/electron-builder build -l --x64
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - uses: actions/upload-artifact@v4
+      with:
+        name: Linux-AppImages-x64
+        path: dist/*-x64.AppImage
+        if-no-files-found: error
+
+  build-linux-arm64:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup QEMU
+      uses: docker/setup-qemu-action@v3
+      with:
+        platforms: arm64
+    - name: Cache npm
+      uses: actions/cache@v4
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+    - name: Cache Electron binaries
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/electron
+        key: ${{ runner.os }}-electron-${{ hashFiles('**/package-lock.json') }}
+    - name: Prepare prebuild sources (no native build here)
+      run: |
+        npm ci
+        rsync -a --info=progress2 src/ prebuild-src --exclude node_modules
+        node prebuild-minify.js
+    - name: Build for arm64 in container
+      uses: docker://arm64v8/node:22-bullseye
+      with:
+        args: >-
+          bash -lc "set -e
+          npm ci
+          cd prebuild-src && npm install --ignore-scripts --no-optional && cd ..
+          ELECTRON_VER=\"$(node -p \"require('./node_modules/electron/package.json').version\")\"
+          ./node_modules/.bin/electron-rebuild -m prebuild-src -f -w node-pty -v $ELECTRON_VER --arch=arm64
+          ./node_modules/.bin/electron-builder build -l --arm64"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - uses: actions/upload-artifact@v4
+      with:
+        name: Linux-AppImages-arm64
+        path: dist/*-arm64.AppImage
+        if-no-files-found: error
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+    - name: Cache npm
+      uses: actions/cache@v4
+      with:
+        path: ~\AppData\Roaming\npm-cache
+        key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+    - name: Cache Electron binaries
+      uses: actions/cache@v4
+      with:
+        path: ~\AppData\Local\electron\Cache
+        key: ${{ runner.os }}-electron-${{ hashFiles('**/package-lock.json') }}
+    - name: Install dependencies
+      run: npm ci
+    - name: Prebuild (x64)
+      run: npm run prebuild-windows
+    - name: Build Windows (x64)
+      run: npm run build-windows
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - uses: actions/upload-artifact@v4
+      with:
+        name: Windows-Installer
+        path: dist/*.exe
+        if-no-files-found: error
+
+  build-darwin:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+    - name: Cache npm
+      uses: actions/cache@v4
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+    - name: Cache Electron binaries
+      uses: actions/cache@v4
+      with:
+        path: ~/Library/Caches/electron
+        key: ${{ runner.os }}-electron-${{ hashFiles('**/package-lock.json') }}
+    - name: Install dependencies
+      run: npm ci
+    - name: Prebuild x64 and build
+      run: |
+        TARGET_ARCH=x64 npm run prebuild-darwin
+        ./node_modules/.bin/electron-builder build -m --x64
+        rm -rf prebuild-src
+    - name: Prebuild arm64 and build
+      run: |
+        TARGET_ARCH=arm64 npm run prebuild-darwin
+        ./node_modules/.bin/electron-builder build -m --arm64
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - uses: actions/upload-artifact@v4
+      with:
+        name: MacOS-Images
+        path: dist/*.dmg
+        if-no-files-found: error

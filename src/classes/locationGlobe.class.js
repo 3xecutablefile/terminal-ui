@@ -49,12 +49,14 @@ class LocationGlobe {
             placeholder.remove();
             container.append(this.globe.domElement);
 
-            // Init animations
+            // Init animations with adaptive FPS
+            this._globeTargetFps = (window.__perf && window.__perf.active) ? 30 : 12;
             this._animate = () => {
                 if (window.mods.globe.globe) {
                     window.mods.globe.globe.tick();
                 }
                 if (window.mods.globe._animate) {
+                    const delay = 1000 / (this._globeTargetFps || 30);
                     setTimeout(() => {
                         try {
                             requestAnimationFrame(window.mods.globe._animate);
@@ -62,7 +64,7 @@ class LocationGlobe {
                             // We probably got caught in a theme change. Print it out but everything should keep running fine.
                             console.warn(e);
                         }
-                    }, 1000 / 30);
+                    }, delay);
                 }
             };
             this.globe.init(window.theme.colors.light_black, () => {
@@ -122,14 +124,23 @@ class LocationGlobe {
         // Init updaters when intro animation is done
         setTimeout(() => {
             this.updateLoc();
-            this.locUpdater = setInterval(() => {
-                this.updateLoc();
-            }, 1000);
-
             this.updateConns();
-            this.connsUpdater = setInterval(() => {
-                this.updateConns();
-            }, 3000);
+            this._applyPerfMode = () => {
+                const fast = (m) => window.__perf ? window.__perf.getFast(m) : 1000*m;
+                const slow = (m) => window.__perf ? window.__perf.getSlow(m) : 5000*m;
+                const use = (fm, sm) => (window.__perf && window.__perf.active ? fm : sm);
+
+                // Update animation FPS goal
+                this._globeTargetFps = (window.__perf && window.__perf.active) ? 30 : 12;
+
+                if (this.locUpdater) clearInterval(this.locUpdater);
+                if (this.connsUpdater) clearInterval(this.connsUpdater);
+
+                this.locUpdater = setInterval(() => this.updateLoc(), use(fast(1.0), slow(3.0)));
+                this.connsUpdater = setInterval(() => this.updateConns(), use(fast(3.0), slow(8.0)));
+            };
+            this._applyPerfMode();
+            window.addEventListener('perf-mode-change', this._applyPerfMode);
         }, 4000);
     }
 
@@ -190,7 +201,11 @@ class LocationGlobe {
         }
     }
     async updateConOnlineConnection() {
-        let newgeo = window.mods.netstat.ipinfo.geo;
+        let newgeo = window.mods.netstat.ipinfo && window.mods.netstat.ipinfo.geo;
+        if (!newgeo || typeof newgeo.latitude === 'undefined' || typeof newgeo.longitude === 'undefined') {
+            document.querySelector("i.mod_globe_headerInfo").innerText = "UNKNOWN";
+            throw new Error('GeoIP unavailable');
+        }
         newgeo.latitude = Math.round(newgeo.latitude*10000)/10000;
         newgeo.longitude = Math.round(newgeo.longitude*10000)/10000;
 

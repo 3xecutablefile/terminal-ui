@@ -1,8 +1,8 @@
 {
-  "name": "edex-ui",
-  "productName": "eDEX-UI",
+  "name": "hackerui",
+  "productName": "HackerUI",
   "version": "2.2.8",
-  "description": "A science fiction desktop running everywhere. Awesome.",
+  "description": "HackerUI — a cyber-console environment by 3xecutable File",
   "keywords": [
     "desktop",
     "sci-fi",
@@ -14,14 +14,14 @@
   "main": "src/_boot.js",
   "scripts": {
     "start": "electron src --nointro",
-    "install-linux": "npm install && cd src && npm install && ./../node_modules/.bin/electron-rebuild -f -w node-pty && cd ..",
+    "install-linux": "npm install && cd src && npm install --ignore-scripts && ./../node_modules/.bin/electron-rebuild -m . -f -w node-pty && cd ..",
     "preinstall-windows": "npm install --global --production windows-build-tools && npm install --global node-gyp && setx PYTHON \"%USERPROFILE%\\.windows-build-tools\\python27\\python.exe\"",
-    "install-windows": "npm install && cd src && npm install && ..\\node_modules\\.bin\\electron-rebuild -f -w node-pty && cd ..",
-    "prebuild-linux": "rsync -a --info=progress2 src/ prebuild-src --exclude node_modules && node prebuild-minify.js && cd prebuild-src && npm install",
-    "prebuild-darwin": "rsync -a src/ prebuild-src --exclude node_modules && node prebuild-minify.js && cd prebuild-src && npm install",
-    "prebuild-windows": "mkdir prebuild-src && xcopy src\\* prebuild-src\\ /E /C /Q /Y && node prebuild-minify.js && cd prebuild-src && npm install",
-    "build-linux": "./node_modules/.bin/electron-builder build -l --x64 --ia32 --arm64 --armv7l",
-    "build-darwin": "./node_modules/.bin/electron-builder build -m",
+    "install-windows": "npm install && cd src && npm install --ignore-scripts && ..\\node_modules\\.bin\\electron-rebuild -m . -f -w node-pty && cd ..",
+    "prebuild-linux": "rsync -a --info=progress2 src/ prebuild-src --exclude node_modules && node prebuild-minify.js && cd prebuild-src && npm install --ignore-scripts --no-optional && ELECTRON_VER=\"$(node -p \"require('../node_modules/electron/package.json').version\")\" && ARCH=\"${TARGET_ARCH:-$npm_config_arch}\" && GYP_DEFINES=openssl_fips= ../node_modules/.bin/electron-rebuild -m . -f -w node-pty -v $ELECTRON_VER ${ARCH:+--arch=$ARCH}",
+    "prebuild-darwin": "rsync -a src/ prebuild-src --exclude node_modules && node prebuild-minify.js && cd prebuild-src && npm install --ignore-scripts --no-optional && ELECTRON_VER=\"$(node -p \"require('../node_modules/electron/package.json').version\")\" && ARCH=\"${TARGET_ARCH:-$npm_config_arch}\" && GYP_DEFINES=openssl_fips= ../node_modules/.bin/electron-rebuild -m . -f -w node-pty -v $ELECTRON_VER ${ARCH:+--arch=$ARCH}",
+    "prebuild-windows": "mkdir prebuild-src && xcopy src\\* prebuild-src\\ /E /C /Q /Y && node prebuild-minify.js && cd prebuild-src && npm install --ignore-scripts --no-optional && ..\\node_modules\\.bin\\electron-rebuild -m . -f -w node-pty -v 12.2.2",
+    "build-linux": "./node_modules/.bin/electron-builder build -l --x64 --arm64",
+    "build-darwin": "./node_modules/.bin/electron-builder build -m --x64 --arm64",
     "build-windows": "node_modules\\.bin\\electron-builder build -w",
     "postbuild-linux": "rm -R prebuild-src",
     "postbuild-darwin": "rm -R prebuild-src",
@@ -34,15 +34,15 @@
     "type": "git",
     "url": "git+https://github.com/GitSquared/edex-ui.git"
   },
-  "author": "Gabriel 'Squared' SAILLARD <gabriel@saillard.dev> (https://gaby.dev)",
+  "author": "3xecutable File",
   "license": "GPL-3.0",
   "bugs": {
     "url": "https://github.com/GitSquared/edex-ui/issues"
   },
   "homepage": "https://github.com/GitSquared/edex-ui#readme",
   "build": {
-    "appId": "com.edex.ui",
-    "productName": "eDEX-UI",
+    "appId": "com.3xecutablefile.hackerui",
+    "productName": "HackerUI",
     "publish": "github",
     "asar": true,
     "compression": "normal",
@@ -52,47 +52,39 @@
       "app": "prebuild-src"
     },
     "forceCodeSigning": false,
-    "npmRebuild": true,
-    "artifactName": "eDEX-UI-${os}-${arch}.${ext}",
+    "npmRebuild": false,
+    "artifactName": "HackerUI-${os}-${arch}.${ext}",
     "linux": {
-      "target": [
-        "AppImage"
-      ],
+      "target": ["AppImage"],
+      "arch": ["x64", "arm64"],
+      "artifactName": "HackerUI-Linux-${arch}.AppImage",
       "category": "System",
-      "icon": "media/linuxIcons"
-    },
-    "appImage": {
-      "artifactName": "eDEX-UI-Linux-${arch}.AppImage"
+      "icon": "media/hackerui.png"
     },
     "mac": {
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
+      "target": ["dmg"],
+      "arch": ["x64", "arm64"],
+      "artifactName": "HackerUI-macOS-${arch}.dmg",
       "category": "public.app-category.utilities",
-      "icon": "media/icon.icns"
+      "icon": "media/hackerui.icns"
     },
     "dmg": {
-      "artifactName": "eDEX-UI-macOS-${arch}.dmg"
+      "artifactName": "HackerUI-macOS-${arch}.dmg",
+      "title": "HackerUI"
     },
     "win": {
       "target": [
         {
           "target": "nsis",
           "arch": [
-            "x64",
-            "ia32"
+            "x64"
           ]
         }
       ],
-      "icon": "media/icon.ico"
+      "icon": "media/hackerui.ico"
     },
     "nsis": {
-      "artifactName": "eDEX-UI-Windows-${arch}.exe",
+      "artifactName": "HackerUI-Windows-${arch}.exe",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "deleteAppDataOnUninstall": true
@@ -100,13 +92,20 @@
   },
   "dependencies": {
     "clean-css": "5.2.1",
-    "electron": "^12.1.0",
-    "electron-builder": "^22.14.5",
-    "electron-rebuild": "^2.3.5",
+    "electron": "12.2.2",
+    "electron-builder": "^24.13.3",
+    "@electron/rebuild": "^3.6.0",
     "mime-types": "^2.1.33",
     "node-abi": "2.30.1",
     "node-json-minify": "1.0.0",
     "terser": "^5.9.0"
+  },
+  "devDependencies": {
+    "node-gyp": "^10.2.0",
+    "node-pty": "^1.0.0"
+  },
+  "overrides": {
+    "node-pty": "^1.0.0"
   },
   "optionalDependencies": {
     "cson-parser": "4.0.9"

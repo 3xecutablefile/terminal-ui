@@ -41,7 +41,5 @@ jspm_packages
 
 dist
 prebuild-src
-
-# Rust build
-native/target
-# (keep Cargo.lock committed for reproducible builds if you prefer)
+src/node_modules
+.DS_Store

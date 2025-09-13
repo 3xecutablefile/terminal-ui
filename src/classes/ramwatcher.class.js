@@ -28,12 +28,19 @@ class RAMwatcher {
         this.points = Array.from(document.querySelectorAll("div.mod_ramwatcher_point"));
         this.shuffleArray(this.points);
 
-        // Init updaters
+        // Init updaters with adaptive throttling
         this.currentlyUpdating = false;
         this.updateInfo();
-        this.infoUpdater = setInterval(() => {
-            this.updateInfo();
-        }, 1500);
+        this._applyPerfMode = () => {
+            const fast = (m) => window.__perf ? window.__perf.getFast(m) : 1000*m;
+            const slow = (m) => window.__perf ? window.__perf.getSlow(m) : 5000*m;
+            const use = (fm, sm) => (window.__perf && window.__perf.active ? fm : sm);
+
+            if (this.infoUpdater) clearInterval(this.infoUpdater);
+            this.infoUpdater = setInterval(() => this.updateInfo(), use(fast(1.2), slow(3.0)));
+        };
+        this._applyPerfMode();
+        window.addEventListener('perf-mode-change', this._applyPerfMode);
     }
     updateInfo() {
         if (this.currentlyUpdating) return;

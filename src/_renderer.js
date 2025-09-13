@@ -1,4 +1,4 @@
-// Disable eval()
+dis// Disable eval()
 window.eval = global.eval = function () {
     throw new Error("eval() is disabled for security reasons.");
 };
@@ -48,10 +48,33 @@ const settingsFile = path.join(settingsDir, "settings.json");
 const shortcutsFile = path.join(settingsDir, "shortcuts.json");
 const lastWindowStateFile = path.join(settingsDir, "lastWindowState.json");
 
-// Load config
+
 window.settings = require(settingsFile);
 window.shortcuts = require(shortcutsFile);
 window.lastWindowState = require(lastWindowStateFile);
+
+// Ensure a versionless, stable document title at all times
+(() => {
+    const APP_TITLE = "HackerUI — by 3xecutable File";
+    const ensureTitleNode = () => {
+        let t = document.querySelector('head > title');
+        if (!t) {
+            t = document.createElement('title');
+            document.head.appendChild(t);
+        }
+        return t;
+    };
+    const applyTitle = () => {
+        if (document.title !== APP_TITLE) document.title = APP_TITLE;
+    };
+    applyTitle();
+    try {
+        const titleNode = ensureTitleNode();
+        const obs = new MutationObserver(applyTitle);
+        obs.observe(titleNode, { childList: true, characterData: true, subtree: true });
+        window.addEventListener('beforeunload', () => obs.disconnect());
+    } catch(_) {}
+})();
 
 // Load CLI parameters
 if (remote.process.argv.includes("--nointro")) {
@@ -138,6 +161,37 @@ window._loadTheme = theme => {
     window.theme.g = theme.colors.g;
     window.theme.b = theme.colors.b;
 };
+
+// Adaptive performance mode: fast when focused/visible, slow when idle/hidden
+window.__perf = {
+    active: true,
+    baseMs: Math.max(250, Number(window.settings.statsRefreshMs) || 1000),
+    slowFactor: 5,
+    getFast: (mult = 1) => Math.max(250, Math.round(((Number(window.settings.statsRefreshMs) || 1000)) * mult)),
+    getSlow: (mult = 1) => Math.max(1000, Math.round(((Number(window.settings.statsRefreshMs) || 1000) * (window.__perf.slowFactor)) * mult))
+};
+
+window._updatePerfMode = () => {
+    if (window.settings.adaptiveThrottling === false) {
+        if (!window.__perf.active) {
+            window.__perf.active = true;
+            window.dispatchEvent(new CustomEvent('perf-mode-change', { detail: { active: true } }));
+        }
+        return;
+    }
+    const win = electron.remote.getCurrentWindow();
+    const newActive = !document.hidden && win.isVisible() && win.isFocused();
+    if (window.__perf.active !== newActive) {
+        window.__perf.active = newActive;
+        window.dispatchEvent(new CustomEvent('perf-mode-change', { detail: { active: newActive } }));
+    }
+};
+
+document.addEventListener('visibilitychange', window._updatePerfMode);
+window.addEventListener('focus', window._updatePerfMode);
+window.addEventListener('blur', window._updatePerfMode);
+// Initialize once
+try { window._updatePerfMode(); } catch(_) {}
 
 function initGraphicalErrorHandling() {
     window.edexErrorsModals = [];
@@ -243,7 +297,7 @@ function displayLine() {
 
     switch(true) {
         case i === 2:
-            bootScreen.innerHTML += `eDEX-UI Kernel version ${electron.remote.app.getVersion()} boot at ${Date().toString()}; root:xnu-1699.22.73~1/RELEASE_X86_64`;
+            /* versionless boot message: no user-facing kernel/version line */
         case i === 4:
             setTimeout(displayLine, 500);
             break;
@@ -288,7 +342,7 @@ async function displayTitleScreen() {
 
     document.body.setAttribute("class", "");
     bootScreen.setAttribute("class", "center");
-    bootScreen.innerHTML = "<h1>eDEX-UI</h1>";
+    bootScreen.innerHTML = "<h1>HackerUI — by 3xecutable File</h1>";
     let title = document.querySelector("section > h1");
 
     await _delay(200);
@@ -430,6 +484,7 @@ async function initUI() {
     window.mods.netstat = new Netstat("mod_column_right");
     window.mods.globe = new LocationGlobe("mod_column_right");
     window.mods.conninfo = new Conninfo("mod_column_right");
+    window.mods.hackerTools = new HackerTools("mod_column_right");
 
     // Fade-in animations
     document.querySelectorAll(".mod_column").forEach(e => {
@@ -487,7 +542,7 @@ async function initUI() {
     window.onmouseup = e => {
         if (window.keyboard.linkedToTerm) window.term[window.currentTerm].term.focus();
     };
-    window.term[0].term.writeln("\033[1m"+`Welcome to eDEX-UI v${electron.remote.app.getVersion()} - Electron v${process.versions.electron}`+"\033[0m");
+    window.term[0].term.writeln("\033[1mWelcome to HackerUI — made by hackers, for hackers\033[0m");
 
     await _delay(100);
 
@@ -616,7 +671,7 @@ window.openSettings = async () => {
 
     new Modal({
         type: "custom",
-        title: `Settings <i>(v${electron.remote.app.getVersion()})</i>`,
+        title: `Settings`,
         html: `<table id="settingsEditor">
                     <tr>
                         <th>Key</th>
@@ -668,6 +723,32 @@ window.openSettings = async () => {
                         <td>termFontSize</td>
                         <td>Size of the terminal text in pixels</td>
                         <td><input type="number" id="settingsEditor-termFontSize" value="${window.settings.termFontSize}"></td>
+                    </tr>
+                    <tr>
+                        <td>termScrollback</td>
+                        <td>Terminal scrollback line limit (higher uses more RAM)</td>
+                        <td><input type="number" id="settingsEditor-termScrollback" value="${window.settings.termScrollback || 1000}"></td>
+                    </tr>
+                    <tr>
+                        <td>gpuAcceleration</td>
+                        <td>Enable GPU acceleration (disable on unstable drivers)</td>
+                        <td><select id="settingsEditor-gpuAcceleration">
+                            <option>${window.settings.gpuAcceleration !== false}</option>
+                            <option>${!(window.settings.gpuAcceleration !== false)}</option>
+                        </select></td>
+                    </tr>
+                    <tr>
+                        <td>adaptiveThrottling</td>
+                        <td>Throttle stats refresh when unfocused/hidden</td>
+                        <td><select id="settingsEditor-adaptiveThrottling">
+                            <option>${window.settings.adaptiveThrottling !== false}</option>
+                            <option>${!(window.settings.adaptiveThrottling !== false)}</option>
+                        </select></td>
+                    </tr>
+                    <tr>
+                        <td>statsRefreshMs</td>
+                        <td>Base refresh interval for system stats (ms)</td>
+                        <td><input type="number" id="settingsEditor-statsRefreshMs" value="${window.settings.statsRefreshMs || 1000}"></td>
                     </tr>
                     <tr>
                         <td>audio</td>
@@ -829,6 +910,10 @@ window.writeSettingsFile = () => {
         keyboard: document.getElementById("settingsEditor-keyboard").value,
         theme: document.getElementById("settingsEditor-theme").value,
         termFontSize: Number(document.getElementById("settingsEditor-termFontSize").value),
+        termScrollback: Number(document.getElementById("settingsEditor-termScrollback").value),
+        gpuAcceleration: (document.getElementById("settingsEditor-gpuAcceleration").value === "true"),
+        adaptiveThrottling: (document.getElementById("settingsEditor-adaptiveThrottling").value === "true"),
+        statsRefreshMs: Number(document.getElementById("settingsEditor-statsRefreshMs").value),
         audio: (document.getElementById("settingsEditor-audio").value === "true"),
         audioVolume: Number(document.getElementById("settingsEditor-audioVolume").value),
         disableFeedbackAudio: (document.getElementById("settingsEditor-disableFeedbackAudio").value === "true"),
@@ -916,7 +1001,7 @@ window.openShortcutsHelp = () => {
     window.keyboard.detach();
     new Modal({
         type: "custom",
-        title: `Available Keyboard Shortcuts <i>(v${electron.remote.app.getVersion()})</i>`,
+        title: `Available Keyboard Shortcuts`,
         html: `<h5>Using either the on-screen or a physical keyboard, you can use the following shortcuts:</h5>
                 <details open id="shortcutsHelpAccordeon1">
                     <summary>Emulator shortcuts</summary>
@@ -1043,7 +1128,7 @@ window.useAppShortcut = action => {
     }
 };
 
-// Global keyboard shortcuts
+
 const globalShortcut = electron.remote.globalShortcut;
 globalShortcut.unregisterAll();
 
@@ -1075,7 +1160,7 @@ window.registerKeyboardShortcuts = () => {
 };
 window.registerKeyboardShortcuts();
 
-// See #361
+
 window.addEventListener("focus", () => {
     window.registerKeyboardShortcuts();
 });
@@ -1084,7 +1169,7 @@ window.addEventListener("blur", () => {
     globalShortcut.unregisterAll();
 });
 
-// Prevent showing menu, exiting fullscreen or app with keyboard shortcuts
+
 document.addEventListener("keydown", e => {
     if (e.key === "Alt") {
         e.preventDefault();
@@ -1103,17 +1188,17 @@ document.addEventListener("keydown", e => {
     }
 });
 
-// Fix #265
+
 window.addEventListener("keyup", e => {
     if (require("os").platform() === "win32" && e.key === "F4" && e.altKey === true) {
         electron.remote.app.quit();
     }
 });
 
-// Fix double-tap zoom on touchscreens
+
 electron.webFrame.setVisualZoomLevelLimits(1, 1);
 
-// Resize terminal with window
+
 window.onresize = () => {
     if (typeof window.currentTerm !== "undefined") {
         if (typeof window.term[window.currentTerm] !== "undefined") {
@@ -1122,7 +1207,7 @@ window.onresize = () => {
     }
 };
 
-// See #413
+
 window.resizeTimeout = null;
 let electronWin = electron.remote.getCurrentWindow();
 electronWin.on("resize", () => {

@@ -60,6 +60,7 @@ class Cpuinfo {
                     limitFPS: 30,
                     responsive: true,
                     millisPerPixel: 50,
+                    interpolation: 'bezier',
                     grid:{
                         fillStyle:'transparent',
                         strokeStyle:'transparent',
@@ -104,20 +105,43 @@ class Cpuinfo {
             this.updateCPUspeed();
             this.updatingCPUtasks = false;
             this.updateCPUtasks();
-            this.loadUpdater = setInterval(() => {
-                this.updateCPUload();
-            }, 500);
-            if (process.platform !== "win32") {
-                this.tempUpdater = setInterval(() => {
-                    this.updateCPUtemp();
-                }, 2000);
-            }
-            this.speedUpdater = setInterval(() => {
-                this.updateCPUspeed();
-            }, 1000);
-            this.tasksUpdater = setInterval(() => {
-                this.updateCPUtasks();
-            }, 5000);
+            // Adaptive refresh intervals (fast when focused/visible, slow when idle/hidden)
+            this._applyPerfMode = () => {
+                const fast = (m) => window.__perf ? window.__perf.getFast(m) : 1000*m;
+                const slow = (m) => window.__perf ? window.__perf.getSlow(m) : 5000*m;
+                const use = (fm, sm) => (window.__perf && window.__perf.active ? fm : sm);
+
+                // Update Smoothie FPS to reduce GPU/CPU when idle
+                try {
+                    const active = (window.__perf && window.__perf.active);
+                    const targetFps = active ? 30 : 12;
+                    const mpp = active ? 50 : 90;
+                    const mode = active ? 'bezier' : 'linear';
+                    for (let i = 0; i < this.charts.length; i++) {
+                        if (this.charts[i] && this.charts[i].options) {
+                            this.charts[i].options.limitFPS = targetFps;
+                            this.charts[i].options.millisPerPixel = mpp;
+                            this.charts[i].options.interpolation = mode;
+                        }
+                    }
+                } catch(_) {}
+
+                // Clear existing timers
+                if (this.loadUpdater) clearInterval(this.loadUpdater);
+                if (this.tempUpdater) clearInterval(this.tempUpdater);
+                if (this.speedUpdater) clearInterval(this.speedUpdater);
+                if (this.tasksUpdater) clearInterval(this.tasksUpdater);
+
+                // Set new timers based on perf mode
+                this.loadUpdater = setInterval(() => this.updateCPUload(), use(fast(0.5), slow(1.5)));
+                if (process.platform !== "win32") {
+                    this.tempUpdater = setInterval(() => this.updateCPUtemp(), use(fast(2.0), slow(5.0)));
+                }
+                this.speedUpdater = setInterval(() => this.updateCPUspeed(), use(fast(1.0), slow(2.0)));
+                this.tasksUpdater = setInterval(() => this.updateCPUtasks(), use(fast(5.0), slow(10.0)));
+            };
+            this._applyPerfMode();
+            window.addEventListener('perf-mode-change', this._applyPerfMode);
         });
     }
     updateCPUload() {

@@ -1,191 +1,150 @@
-# eDEX Native (Rust)
+<p align="center">
+  <br>
+  <img alt="HackerUI" src="media/logo.png" width="200">
+  <br><br>
+  <strong>HackerUI — a cyber-console environment by 3xecutable File</strong>
+  <br>
+  <em>Modded fork of the archived eDEX‑UI project.</em>
+  <br><br>
+</p>
 
-GPU-accelerated remake of the original eDEX-UI.  It launches your **real host shell** through a PTY/ConPTY backend and renders a neon dashboard with Rust, `winit`, and `wgpu`.
+HackerUI is a fullscreen, cross‑platform terminal emulator and system monitor that looks and feels like a sci‑fi computer interface. It’s a modded version of eDEX‑UI with refreshed branding, quality‑of‑life fixes, and an optimized network widget.
 
-> ⚡ Early preview: basic terminal, theme switcher and CPU/RAM panels work.  Packaging and input polish are ongoing.
+Highlights
+- Modded fork of eDEX‑UI with HackerUI branding and boot sequence.
+- Cleaned up “Network” widget that shows just Local and Public IP.
+- Dual‑arch macOS builds with DMG volume label “HackerUI”.
+- Node 22 + Electron 12 + node‑pty ^1.0.0 compatible.
+- Same immersive UI: tabs, on‑screen keyboard, themes, and system stats.
 
-## Table of Contents
-- [Features](#features)
-- [Quick Start](#quick-start)
-  - [Prebuilt Binaries](#prebuilt-binaries)
-  - [Build from Source](#build-from-source)
-- [Running](#running)
-- [Configuration](#configuration)
-  - [Themes](#themes)
-  - [Keybinds](#keybinds)
-- [Development](#development)
-- [License](#license)
+What’s different from eDEX‑UI
+- Branding: App name, product name, appId, window title, and boot text now say “HackerUI — by 3xecutable File”.
+- DMG artifacts: `HackerUI-macOS-arm64.dmg` and `HackerUI-macOS-x64.dmg` with volume label “HackerUI”.
+- Icons: builds reference `media/hackerui.icns` (macOS), `media/hackerui.ico` (Windows), `media/hackerui.png` (Linux).
+- Network widget: simplified and faster. No more `ifconfig`/`ipconfig`/`netstat` dumps.
+  - Local IP: macOS `ipconfig getifaddr en0` (fallback en1), Linux `hostname -I | awk '{print $1}'`, Windows parses `ipconfig`.
+  - Public IP: `curl -s ifconfig.me` (fallback `curl -s api.ipify.org`), cached for 60s.
+  - Polling: Local every 5s, Public every 60s; respects adaptive throttling when unfocused/hidden.
 
-## Features
-- **Real shell** via `portable-pty`/ConPTY – anything on your `$PATH` works (`git`, `vim`, `tmux`, ...).
-- **GPU rendering** with `winit` + `wgpu`.
-- **ANSI/UTF-8 terminal emulation** built on `vte`.
-- **Theme system** with runtime switcher (`Ctrl/Cmd + Shift + T`).
-- **System panels** for CPU and memory, sampled on a throttled cadence.
+Quick start
+1) Requirements
+- Node.js 22, npm 10+
+- macOS, Linux, or Windows
 
-## Quick Start
-### Prebuilt Binaries
-Download the archive for your platform from [Releases](https://github.com/3xecutablefile/terminal-ui/releases) and extract it.
+2) Install and run (development)
+- Install deps: `npm install`
+- Start: `npm start`
+  - Launches Electron 12 in fullscreen (unless settings allow windowed mode).
 
-| OS    | Arch   | Artifact example      |
-|-------|--------|----------------------|
-| Linux | x86_64 | `app-linux-x64.zip`  |
-| macOS | x86_64 | `app-macos-x64.zip` |
+3) Build binaries
+- macOS (x64 + arm64):
+  - Prebuild native modules: `npm run prebuild-darwin`
+  - Build: `npm run build-darwin`
+  - Output: `dist/HackerUI-macOS-arm64.dmg`, `dist/HackerUI-macOS-x64.dmg`
+- Linux (x64/arm64):
+  - Prebuild: `npm run prebuild-linux`
+  - Build: `npm run build-linux`
+  - Output: `dist/HackerUI-Linux-<arch>.AppImage`
+- Windows (x64):
+  - Prebuild: `npm run prebuild-windows`
+  - Build: `npm run build-windows`
+  - Output: `dist/HackerUI-Windows-x64.exe`
 
-### Build from Source
-Requirements:
-- Rust toolchain (pinned by `rust-toolchain.toml`, ≥1.79)
-- Vulkan (Linux) or Metal (macOS) capable GPU and drivers
+Features
+- Terminal emulator with tabs, colors, mouse, and curses support (xterm.js based).
+- Real‑time system stats (CPU, RAM, processes) and network info.
+- Touch‑friendly on‑screen keyboard and sci‑fi themed UI.
+- Filesystem viewer that follows the terminal’s CWD on macOS/Linux.
+- Theming support (custom colors, fonts, keyboards, and CSS injects).
 
-```bash
-# clone
-git clone https://github.com/3xecutablefile/terminal-ui.git
-cd terminal-ui
+Network widget details
+- Local IP logic
+  - macOS: `ipconfig getifaddr en0` then `en1` as fallback.
+  - Linux: `hostname -I | awk '{print $1}'`.
+  - Windows: parses `ipconfig` for “IPv4 Address”.
+- Public IP logic
+  - `curl -s ifconfig.me`, fallback `curl -s api.ipify.org`.
+  - Cached for 60 seconds to avoid spamming requests.
+- Refresh intervals
+  - Local IP every 5s, Public IP every 60s; increased when app is unfocused/hidden if adaptive throttling is enabled.
 
-# build the native workspace
-cargo build --release --manifest-path native/Cargo.toml -p app
+Configuration
+- HackerUI stores its settings under Electron’s userData path for your OS.
+- Useful settings include:
+  - `shell`, `shellArgs`, `cwd`, `theme`, `keyboard`, `termFontSize`, `termScrollback`.
+  - `gpuAcceleration`, `adaptiveThrottling`, `statsRefreshMs`.
+  - `pingAddr`, `port`, `nointro`, `nocursor`, `allowWindowed`, `keepGeometry`.
 
-# optional: symlink the binary
-sudo ln -sf "$(pwd)/native/target/release/app" /usr/local/bin/terminal-ui
-```
+Assets and icons
+- macOS icon: `media/hackerui.icns`
+- Windows icon: `media/hackerui.ico`
+- Linux icon: `media/hackerui.png`
+- Replace these files with your own artwork to customize the look. The repo currently includes placeholders derived from the original icons.
 
+Keyboard shortcuts
+- App shortcuts are configurable in `shortcuts.json` (auto‑generated in userData on first run).
+- Common actions (examples):
+  - `Ctrl+X` with numbers 1–5 for tab switching
+  - `Ctrl+Shift+P` toggle keyboard password mode
+  - `Ctrl+Shift+I` open devtools (if enabled)
 
-### Clear old installation
-If you have a previous build installed, remove its binary and config before installing the new one:
+Troubleshooting
+- If native modules fail to load, ensure you ran the appropriate `prebuild-*` script for your platform. These scripts rebuild node‑pty for Electron 12.
+- On Linux, mark AppImage executable: `chmod +x HackerUI-Linux-*.AppImage`.
+- If the UI feels sluggish when unfocused, that’s expected with adaptive throttling enabled; disable it in settings to force fast refresh.
 
-```bash
-sudo rm -f /usr/local/bin/terminal-ui       # old symlink or binary
-rm -rf ~/.config/edex-native                # Linux/macOS config and themes
-rm -rf ~/Library/Application\ Support/edex-native  # macOS alt config path
-```
+Screenshots
+![Default](media/screenshot_default.png)
+![Blade](media/screenshot_blade.png)
+![Disrupted](media/screenshot_disrupted.png)
+![Horizon](media/screenshot_horizon.png)
 
-Then follow the steps above to install the latest version.
+Credits
+- Original project: eDEX‑UI by Gabriel “Squared” Saillard (GitSquared).
+- HackerUI: rebrand and modifications by 3xecutable File.
+- License: GPL‑3.0 (see LICENSE). Please respect the license when redistributing.
 
-## Running
-```bash
-=======
-## Running
-```bash
-
-# run with defaults
-app
-
-# choose a theme on startup
-app --theme "Tron Neon"
-
-# specify initial terminal size
-app --cols 120 --rows 36
-```
-Inside the window:
-- **F1** runs `nmap --version` (diagnostic shortcut).
-- **Ctrl/Cmd + Shift + T** opens the theme switcher.
-
-## Configuration
-Default config file:
-- Linux/macOS: `~/.config/edex-native/config.toml`
-- macOS Alt: `~/Library/Application Support/edex-native/config.toml`
-
-```toml
-[appearance]
-theme = "Tron Neon"
-font_family = "JetBrains Mono"
-font_size = 16
-
-[shell]
-login = true
-```
-
-### Themes
-TOML theme files are loaded from:
-1. `~/.config/edex-native/themes/*.toml`
-2. `native/app/assets/themes/*.toml` (bundled)
-
-Example:
-```toml
-[terminal]
-foreground = "#D6EFFF"
-background = "#07121A"
-cursor     = "#66FCF1"
-
-[effects]
-grid_color       = "rgba(0,229,255,0.23)"
-scanline_opacity = 0.06
-```
-
-
-Resize the window → the grid should reflow without drift.
+Disclaimer
+- HackerUI is an independent, modded fork of the archived eDEX‑UI project. It is not affiliated with or endorsed by the original author.
 
 ---
 
-## 🧰 Development
+## 🧰 Native (Rust) Workspace
 
-* PTY daemon (`native/ptyd`) speaks NDJSON:
+An experimental native rewrite lives under `native/` with a wgpu UI and a PTY daemon.
 
-  * Input frame: `{"t":"i","data":"<base64-bytes>"}`
-  * Resize: `{"t":"r","cols":120,"rows":40}`
-  * Signal: `{"t":"s","sig":"INT"}`
-  * Output: `{"t":"o","data":"<base64-bytes>","seq":N}`
-  * Exit: `{"t":"x","code":0}` (includes string `signal` when terminated by one, e.g., `{"t":"x","code":1,"signal":"Terminated"}`)
-* Native app (`native/app`) renders with `wgpu`, feeds PTY → emulator → GPU.
+- PTY daemon (`native/ptyd`) speaks NDJSON:
+  - Input frame: `{"t":"i","data":"<base64-bytes>"}`
+  - Resize: `{"t":"r","cols":120,"rows":40}`
+  - Signal: `{"t":"s","sig":"INT"}`
+  - Output: `{"t":"o","data":"<base64-bytes>","seq":N}`
+  - Exit: `{"t":"x","code":0}` (includes string `signal` when terminated by one, e.g., `{"t":"x","code":1,"signal":"Terminated"}`)
+- Native app (`native/app`) renders with `wgpu`, feeds PTY → emulator → GPU.
 
-### CI (GitHub Actions)
+### Native CI (GitHub Actions)
 
-* Matrix builds: Linux (x64) and macOS (x64)
-* Steps: `fmt`, `clippy -D warnings`, `test`, `build`
-* Artifacts include binary + `assets/` (themes, shaders)
+- Matrix builds: Linux (x64) and macOS (x64)
+- Steps: `fmt`, `clippy -D warnings`, `test`, `build`
+- Artifacts include binary + `assets/` (themes, shaders)
 
----
+### Native Development
 
-## 🐛 Troubleshooting
-
-* **Linux/Wayland**: ensure Vulkan loader (`libvulkan1`) and GPU driver installed.
-* **No colors/Truecolor**: verify `TERM=xterm-256color`.
-* **Huge output (e.g., `yes`)**: PTY → UI buffer is capped; rendering may rate-limit.
-
----
-
-## 🙌 Credits
-
-* **Fork maintainer**: **@3xecutablefile** — project direction, migration plan, native UI, and theme system.
-* Inspired by the original **eDEX-UI** concept. If you reuse original eDEX assets/themes, respect their **GPL-3.0** license.
-* This Rust rewrite’s code is licensed as noted below.
-
----
-
-## 📜 License
-
-* **Rust code (this repository)**: MIT or Apache-2.0 (choose one).
-* **Legacy eDEX assets** (if reused): GPL-3.0. Mixing GPL assets imposes GPL terms on the combined distribution.
-
----
-
-## 📬 Contributing
-
-PRs and issues welcome!
-
-* Run `cargo fmt`, `cargo clippy -D warnings`, `cargo test` before pushing.
-* Add screenshots/gifs for UI PRs (themes/effects).
-* Keep panels on a throttled update cadence; never block the terminal render path.
-
-```
-=======
-### Keybinds
-| Action               | Shortcut                |
-|----------------------|-------------------------|
-| Theme switcher       | `Ctrl/Cmd + Shift + T`  |
-| Copy / Paste         | Standard OS shortcuts   |
-
-## Development
-- Workspace is under `native/`
+- Workspace lives under `native/`
 - Run checks before submitting PRs:
   ```bash
   cargo fmt --all --manifest-path native/Cargo.toml -- --check
   cargo clippy --workspace --manifest-path native/Cargo.toml -- -D warnings
   cargo test --workspace --manifest-path native/Cargo.toml
   ```
-- CI builds Linux and macOS x86_64 targets and uploads zipped binaries.
 
-## License
-- Rust code in this repo: MIT OR Apache-2.0
+### Keybinds
+| Action               | Shortcut                |
+|----------------------|-------------------------|
+| Theme switcher       | `Ctrl/Cmd + Shift + T`  |
+| Copy / Paste         | Standard OS shortcuts   |
+
+### Native License
+
+- Rust code in `native/`: MIT OR Apache-2.0
 - Legacy eDEX assets (if reused): GPL-3.0
 

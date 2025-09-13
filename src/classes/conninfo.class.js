@@ -57,9 +57,17 @@ class Conninfo {
 
         // Init updater
         this.updateInfo();
-        this.infoUpdater = setInterval(() => {
-            this.updateInfo();
-        }, 1000);
+        // Adaptive refresh intervals
+        this._applyPerfMode = () => {
+            const fast = (m) => window.__perf ? window.__perf.getFast(m) : 1000*m;
+            const slow = (m) => window.__perf ? window.__perf.getSlow(m) : 5000*m;
+            const use = (fm, sm) => (window.__perf && window.__perf.active ? fm : sm);
+
+            if (this.infoUpdater) clearInterval(this.infoUpdater);
+            this.infoUpdater = setInterval(() => this.updateInfo(), use(fast(1.0), slow(3.0)));
+        };
+        this._applyPerfMode();
+        window.addEventListener('perf-mode-change', this._applyPerfMode);
     }
     updateInfo() {
         let time = new Date().getTime();
