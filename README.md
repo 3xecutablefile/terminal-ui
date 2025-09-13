@@ -27,16 +27,20 @@ What’s different from eDEX‑UI
   - Polling: Local every 5s, Public every 60s; respects adaptive throttling when unfocused/hidden.
 
 Quick start
-1) Requirements
+1) Clone and enter
+- `git clone https://github.com/3xecutable/terminal-ui.git`
+- `cd terminal-ui`
+
+2) Requirements
 - Node.js 22, npm 10+
 - macOS, Linux, or Windows
 
-2) Install and run (development)
+3) Install and run (development)
 - Install deps: `npm install`
 - Start: `npm start`
   - Launches Electron 12 in fullscreen (unless settings allow windowed mode).
 
-3) Build binaries
+4) Build binaries
 - macOS (x64 + arm64):
   - Prebuild native modules: `npm run prebuild-darwin`
   - Build: `npm run build-darwin`
@@ -49,6 +53,9 @@ Quick start
   - Prebuild: `npm run prebuild-windows`
   - Build: `npm run build-windows`
   - Output: `dist/HackerUI-Windows-x64.exe`
+
+5) Pin HackerUI to the macOS Dock
+- Launch the app once, then right-click its Dock icon and choose “Options → Keep in Dock”, or drag `HackerUI.app` from `/Applications` onto the Dock.
 
 Features
 - Terminal emulator with tabs, colors, mouse, and curses support (xterm.js based).
