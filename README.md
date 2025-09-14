@@ -45,6 +45,10 @@ Quick start
 - Ensure dependencies are installed (`npm install`) before running these commands.
 =======
 
+- Ensure dependencies are installed (`npm install`) before running these commands.
+=======
+
+
 - macOS (x64 + arm64):
   - Prebuild native modules: `npm run prebuild-darwin`
   - Build: `npm run build-darwin`
