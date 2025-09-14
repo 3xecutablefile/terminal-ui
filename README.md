@@ -41,7 +41,14 @@ Quick start
   - Launches Electron 12 in fullscreen (unless settings allow windowed mode).
 
 4) Build binaries
+
 - Ensure dependencies are installed (`npm install`) before running these commands.
+=======
+
+- Ensure dependencies are installed (`npm install`) before running these commands.
+=======
+
+
 - macOS (x64 + arm64):
   - Prebuild native modules: `npm run prebuild-darwin`
   - Build: `npm run build-darwin`
