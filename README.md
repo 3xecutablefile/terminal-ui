@@ -42,25 +42,16 @@ Quick start
 
 4) Build binaries
 
-- Ensure dependencies are installed (`npm install`) before running these commands.
-=======
+Use the `builder.sh` helper to install dependencies if needed, prebuild native modules, and build for your platform:
 
-- Ensure dependencies are installed (`npm install`) before running these commands.
-=======
+```bash
+./builder.sh darwin       # macOS (x64 + arm64)
+./builder.sh linux        # Linux (x64 + arm64)
+./builder.sh linux-arm64  # Linux arm64 only
+./builder.sh windows      # Windows (x64)
+```
 
-
-- macOS (x64 + arm64):
-  - Prebuild native modules: `npm run prebuild-darwin`
-  - Build: `npm run build-darwin`
-  - Output: `dist/HackerUI-macOS-arm64.dmg`, `dist/HackerUI-macOS-x64.dmg`
-- Linux (x64/arm64):
-  - Prebuild: `npm run prebuild-linux`
-  - Build: `npm run build-linux`
-  - Output: `dist/HackerUI-Linux-<arch>.AppImage`
-- Windows (x64):
-  - Prebuild: `npm run prebuild-windows`
-  - Build: `npm run build-windows`
-  - Output: `dist/HackerUI-Windows-x64.exe`
+Artifacts are written to `dist/`.
 
 5) Pin HackerUI to the macOS Dock
 - Launch the app once, then right-click its Dock icon and choose “Options → Keep in Dock”, or drag `HackerUI.app` from `/Applications` onto the Dock.
