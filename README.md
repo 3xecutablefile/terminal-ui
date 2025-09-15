@@ -38,7 +38,8 @@ Quick start
 3) Install and run (development)
 - Install deps: `npm install`
 - Start: `npm start`
-  - Launches Electron 12 in fullscreen (unless settings allow windowed mode).
+ - Launches Electron 12 in fullscreen (unless settings allow windowed mode).
+- Test: `npm test` (requires internet access for Snyk)
 
 4) Build binaries
 
